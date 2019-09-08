@@ -29,6 +29,11 @@ use Symfony\Component\DomCrawler\Field\TextareaFormField;
 use Symfony\Component\DomCrawler\Form;
 use Symfony\Component\DomCrawler\Link;
 
+//Alias for Symfony < 4.3
+if (!class_exists('Symfony\Component\BrowserKit\AbstractBrowser') && class_exists('Symfony\Component\BrowserKit\Client')) {
+    class_alias('Symfony\Component\BrowserKit\Client', 'Symfony\Component\BrowserKit\AbstractBrowser');
+}
+
 class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocator, ConflictsWithModule
 {
     /**
