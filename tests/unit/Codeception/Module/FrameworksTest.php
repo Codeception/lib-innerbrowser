@@ -15,7 +15,9 @@ class FrameworksTest extends TestsForWeb
 
     public function _setUp()
     {
-        $this->module = new \Codeception\Module\UniversalFramework(make_container());
+        $container = \Codeception\Util\Stub::make('Codeception\Lib\ModuleContainer');
+        $this->module = new \Codeception\Module\UniversalFramework($container);
+        $this->module->_initialize();
     }
 
     public function testHttpAuth()
@@ -83,11 +85,13 @@ class FrameworksTest extends TestsForWeb
 
     public function testCreateSnapshotOnFail()
     {
-        $module = Stub::construct(get_class($this->module), [make_container()], [
+        $container = \Codeception\Util\Stub::make('Codeception\Lib\ModuleContainer');
+        $module = Stub::construct(get_class($this->module), [$container], [
             '_savePageSource' => \Codeception\Stub\Expected::once(function ($filename) {
                 $this->assertEquals(codecept_log_dir('Codeception.Module.UniversalFramework.looks.like..test.fail.html'), $filename);
             }),
         ]);
+        $module->_initialize();
         $module->amOnPage('/');
         $cest = new \Codeception\Test\Cest($this->module, 'looks:like::test', 'demo1Cest.php');
         $module->_failed($cest, new \PHPUnit\Framework\AssertionFailedError());

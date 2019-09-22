@@ -23,6 +23,9 @@
         "symfony/browser-kit": ">=2.7 <5.0",
         "symfony/dom-crawler": ">=2.7 <5.0"
     },
+    "require-dev": {
+        "codeception/util-universalframework": "dev-master"
+    },
     "autoload":{
         "classmap": ["src/"]
     },
