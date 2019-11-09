@@ -19,12 +19,15 @@
 
     "require": {
         "php": ">=5.6.0 <8.0",
-        "codeception/codeception": "4.0.x-dev | ^4.0",
+        "codeception/codeception": "*@dev",
         "symfony/browser-kit": ">=2.7 <5.0",
         "symfony/dom-crawler": ">=2.7 <5.0"
     },
     "require-dev": {
         "codeception/util-universalframework": "dev-master"
+    },
+    "conflict": {
+        "codeception/codeception": "<4.0"
     },
     "autoload":{
         "classmap": ["src/"]
