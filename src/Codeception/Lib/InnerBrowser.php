@@ -439,41 +439,47 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     private function clickButton(\DOMNode $node)
     {
-        $formParams = [];
-        $buttonName = (string)$node->getAttribute('name');
-        $buttonValue = $node->getAttribute('value');
-
-        if ($buttonName !== '' && $buttonValue !== null) {
-            $formParams = [$buttonName => $buttonValue];
+        /**
+         * First we check if the button is associated to a form.
+         * It is associated to a form when it has a nonempty form
+         */
+        $formAttribute = $node->attributes->getNamedItem('form');
+        if (isset($formAttribute)) {
+            $form = empty($formAttribute->nodeValue) ? null : $this->filterByCSS('#' . $formAttribute->nodeValue)->getNode(0);
+        } else {
+            // Check parents
+            $currentNode = $node;
+            $form = null;
+            while ($currentNode->parentNode !== null) {
+                $currentNode = $currentNode->parentNode;
+                if ($currentNode->nodeName === 'form') {
+                    $form = $node;
+                    break;
+                }
+            }
         }
 
-        if (!empty($node->getAttribute('form'))) {
-            $formCrawler = $this->filterByCSS('#' . $node->getAttribute('form'));
-            if ($formCrawler->count() !== 1) {
-                throw new TestRuntimeException("Found form with id {$node->getAttribute('form')} {$formCrawler->count()} times, expected exactly 1");
+        if (isset($form)) {
+            $buttonName = $node->getAttribute('name');
+            if ($buttonName !== '') {
+                $formParams = [$buttonName => $node->getAttribute('value')];
+            } else {
+                $formParams = [];
             }
             $this->proceedSubmitForm(
-                new Crawler($formCrawler->getNode(0), $this->getAbsoluteUrlFor($this->_getCurrentUri()), $this->getBaseUrl()),
+                new Crawler($form, $this->getAbsoluteUrlFor($this->_getCurrentUri()), $this->getBaseUrl()),
                 $formParams
             );
             return true;
-        }
-        
-        while ($node->parentNode !== null) {
-            $node = $node->parentNode;
-            if (!isset($node->tagName)) {
-                // this is the top most node, it has no parent either
-                break;
-            }
-            if ($node->tagName === 'a') {
-                $this->openHrefFromDomNode($node);
-                return true;
-            } elseif ($node->tagName === 'form') {
-                $this->proceedSubmitForm(
-                    new Crawler($node, $this->getAbsoluteUrlFor($this->_getCurrentUri()), $this->getBaseUrl()),
-                    $formParams
-                );
-                return true;
+        } else {
+            // Check if the button is inside an anchor.
+            $currentNode = $node;
+            while ($currentNode->parentNode !== null) {
+                $currentNode = $currentNode->parentNode;
+                if ($currentNode->nodeName === 'a') {
+                    $this->openHrefFromDomNode($currentNode);
+                    return true;
+                }
             }
         }
         throw new TestRuntimeException('Button is not inside a link or a form');
