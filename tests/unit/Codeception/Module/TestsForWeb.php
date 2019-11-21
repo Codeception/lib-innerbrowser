@@ -1648,6 +1648,42 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->seeCurrentUrlEquals('/form/anchor');
     }
 
+    public function testClickButtonWithForm()
+    {
+        $this->module->amOnPage('/form/button-not-in-form');
+        $this->module->click('Submit 2');
+        $this->module->seeCurrentUrlEquals('/form/button');
+    }
+
+    public function testClickButtonWithEmptyForm()
+    {
+        $this->module->amOnPage('/form/button-not-in-form');
+        $this->expectException(\Codeception\Exception\TestRuntimeException::class);
+        $this->module->click('Should not submit');
+        $this->module->seeCurrentUrlEquals('/form/button-not-in-form');
+    }
+
+    public function testClickButtonNotInForm()
+    {
+        $this->module->amOnPage('/form/button-not-in-form');
+        $this->expectException(\Codeception\Exception\TestRuntimeException::class);
+        $this->module->click('Outside submit');
+    }
+
+    public function testClickButtonWithFormInvalidIdInside()
+    {
+        $this->module->amOnPage('/form/button-not-in-form');
+        $this->expectException(\Codeception\Exception\TestRuntimeException::class);
+        $this->module->click('Invalid form2');
+    }
+
+    public function testClickButtonWithFormInvalidIdOutside()
+    {
+        $this->module->amOnPage('/form/button-not-in-form');
+        $this->expectException(\Codeception\Exception\TestRuntimeException::class);
+        $this->module->click('Invalid form');
+    }
+
     public function testSubmitHashForm()
     {
         $this->module->amOnPage('/form/anchor');

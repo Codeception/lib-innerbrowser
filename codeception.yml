@@ -5,3 +5,8 @@ paths:
     support: tests/_support
     envs: tests/_envs
 actor_suffix: Tester
+coverage:
+    enabled: true
+    local: true
+    include:
+      - src/*.php

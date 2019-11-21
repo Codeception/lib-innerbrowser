@@ -1,0 +1,11 @@
+tools:
+  external_code_coverage: true
+build:
+  nodes:
+    analysis:
+      tests:
+        override:
+          - php-scrutinizer-run
+filter:
+  excluded_paths:
+    - "tests/_support/_generated"

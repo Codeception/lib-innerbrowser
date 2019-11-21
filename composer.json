@@ -34,5 +34,8 @@
     },
     "config": {
         "classmap-authoritative": true
+    },
+    "scripts": {
+        "test": "codecept run --coverage-xml"
     }
 }
