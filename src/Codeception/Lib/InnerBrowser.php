@@ -63,7 +63,13 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     public function _failed(TestInterface $test, $fail)
     {
-        if (!$this->client || !$this->client->getInternalResponse()) {
+        try {
+            if (!$this->client || !$this->client->getInternalResponse()) {
+                return;
+            }
+        } catch (BadMethodCallException $e) {
+            //Symfony 5 throws exception if request() method threw an exception.
+            //The "request()" method must be called before "Symfony\Component\BrowserKit\AbstractBrowser::getInternalResponse()"
             return;
         }
         $filename = preg_replace('~\W~', '.', Descriptor::getTestSignatureUnique($test));
@@ -78,8 +84,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         try {
             $internalResponse = $this->client->getInternalResponse();
         } catch (BadMethodCallException $e) {
-            //Symfony 5 throws exception if request() method threw an exception.
-            //The "request()" method must be called before "Symfony\Component\BrowserKit\AbstractBrowser::getInternalResponse()"
             $internalResponse = false;
         }
         
