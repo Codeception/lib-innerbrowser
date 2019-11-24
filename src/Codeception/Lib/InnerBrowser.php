@@ -539,7 +539,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertTrue(true);
     }
 
-    public function dontSeeLink($text, $url = null)
+    public function dontSeeLink($text, $url = '')
     {
         $crawler = $this->getCrawler()->selectLink($text);
         if (!$url) {
@@ -547,7 +547,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                 $this->fail("Link containing text '$text' was found in page " . $this->_getCurrentUri());
             }
         }
-        $crawler = $crawler->filterXPath(sprintf('.//a[substring(@href, string-length(@href) - string-length(%1$s) + 1)=%1$s]', Crawler::xpathLiteral($url)));
+        $crawler = $crawler->filterXPath(
+            sprintf('.//a[substring(@href, string-length(@href) - string-length(%1$s) + 1)=%1$s]',
+            Crawler::xpathLiteral($url))
+        );
         if ($crawler->count() > 0) {
             $this->fail("Link containing text '$text' and URL '$url' was found in page " . $this->_getCurrentUri());
         }
