@@ -21,6 +21,7 @@ use Codeception\Util\Locator;
 use Codeception\Util\ReflectionHelper;
 use Codeception\Util\Uri;
 use Symfony\Component\BrowserKit\Cookie;
+use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 use Symfony\Component\DomCrawler\Field\FileFormField;
@@ -73,8 +74,14 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             'application/xml' => 'xml',
             'text/plain' => 'txt'
         ];
-        
-        $internalResponse = $this->client->getInternalResponse();
+
+        try {
+            $internalResponse = $this->client->getInternalResponse();
+        } catch (BadMethodCallException $e) {
+            //Symfony 5 throws exception if request() method threw an exception.
+            //The "request()" method must be called before "Symfony\Component\BrowserKit\AbstractBrowser::getInternalResponse()"
+            $internalResponse = false;
+        }
         
         $responseContentType = $internalResponse ? $internalResponse->getHeader('content-type') : '';
         list($responseMimeType) = explode(';', $responseContentType);
