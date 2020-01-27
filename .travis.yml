@@ -14,8 +14,8 @@ sudo: false
 
 install:
   - '[[ -z "$CI_USER_TOKEN" ]] || composer config github-oauth.github.com ${CI_USER_TOKEN};'
-  - travis_retry composer self-update && composer --version
-  - travis_retry composer install --prefer-dist --no-interaction
+  - COMPOSER_MEMORY_LIMIT=-1 composer self-update && composer --version
+  - COMPOSER_MEMORY_LIMIT=-1 composer install --prefer-dist --no-interaction
   - phpenv config-rm xdebug.ini
   - if [[ "$TRAVIS_PHP_VERSION" == "7.3" ]]; then pecl install -f pcov; fi
   
