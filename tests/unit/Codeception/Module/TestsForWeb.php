@@ -1746,4 +1746,27 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $data = data::get('form');
         $this->assertEquals('thisissecret', $data['password']);
     }
+
+
+    public function testCanResetHTTPAuthenticated()
+    {
+        $this->module->amHttpAuthenticated('user', 'pass');
+        $this->module->amOnPage('/');
+        $server = $this->module->client->getRequest()->getServer();
+        $this->assertArrayHasKey('PHP_AUTH_USER', $server);
+        $this->assertArrayHasKey('PHP_AUTH_PW', $server);
+        $this->module->setServerParameters([]);
+        $this->module->amOnPage('/');
+        $server = $this->module->client->getRequest()->getServer();
+        $this->assertArrayNotHasKey('PHP_AUTH_USER', $server);
+        $this->assertArrayNotHasKey('PHP_AUTH_PW', $server);
+    }
+
+    public function testHaveServerParameter()
+    {
+        $this->module->haveServerParameter('my', 'param');
+        $this->module->amOnPage('/');
+        $server = $this->module->client->getRequest()->getServer();
+        $this->assertArrayHasKey('my', $server);
+    }
 }

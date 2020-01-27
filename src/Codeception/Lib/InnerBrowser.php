@@ -2034,4 +2034,29 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
         return $content;
     }
+
+    /**
+     * Sets SERVER parameters valid for all next requests.
+     * this will remove old ones.
+     *
+     * ```php
+     * $I->setServerParameters([]);
+     * ```
+     */
+    public function setServerParameters(array $params)
+    {
+        $this->client->setServerParameters($params);
+    }
+
+    /**
+     * Sets SERVER parameter valid for all next requests.
+     *
+     * ```php
+     * $I->haveServerParameter('name', 'value');
+     * ```
+     */
+    public function haveServerParameter($name, $value)
+    {
+        $this->client->setServerParameter($name, $value);
+    }
 }
