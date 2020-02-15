@@ -753,7 +753,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
         return [
             'Contains',
-            $value,
+            (string)$value,
             $testValues,
             sprintf(
                 'Failed asserting that `%s` is in %s\'s value: %s',
