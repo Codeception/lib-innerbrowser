@@ -20,6 +20,7 @@ use Codeception\Util\HttpCode;
 use Codeception\Util\Locator;
 use Codeception\Util\ReflectionHelper;
 use Codeception\Util\Uri;
+use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
 use Symfony\Component\DomCrawler\Crawler;
@@ -45,7 +46,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * @api
-     * @var \Symfony\Component\BrowserKit\AbstractBrowser
+     * @var \Symfony\Component\BrowserKit\AbstractBrowser|null
      */
     public $client;
 
@@ -62,10 +63,18 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     private $baseUrl;
 
+    /**
+     * @return \Symfony\Component\BrowserKit\AbstractBrowser|null
+     */
+    public function getClient()
+    {
+        return $this->client;
+    }
+
     public function _failed(TestInterface $test, $fail)
     {
         try {
-            if (!$this->client || !$this->client->getInternalResponse()) {
+            if (!$this->getClient() || !$this->getClient()->getInternalResponse()) {
                 return;
             }
         } catch (BadMethodCallException $e) {
@@ -83,7 +92,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         ];
 
         try {
-            $internalResponse = $this->client->getInternalResponse();
+            $internalResponse = $this->getClient()->getInternalResponse();
         } catch (BadMethodCallException $e) {
             $internalResponse = false;
         }
@@ -214,23 +223,25 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             }
         }
 
-        if (method_exists($this->client, 'isFollowingRedirects')) {
-            $isFollowingRedirects = $this->client->isFollowingRedirects();
-            $maxRedirects = $this->client->getMaxRedirects();
+        $client = $this->getClient();
+
+        if (method_exists($client, 'isFollowingRedirects')) {
+            $isFollowingRedirects = $client->isFollowingRedirects();
+            $maxRedirects = $client->getMaxRedirects();
         } else {
             //Symfony 2.7 support
-            $isFollowingRedirects = ReflectionHelper::readPrivateProperty($this->client, 'followRedirects', 'Symfony\Component\BrowserKit\Client');
-            $maxRedirects = ReflectionHelper::readPrivateProperty($this->client, 'maxRedirects', 'Symfony\Component\BrowserKit\Client');
+            $isFollowingRedirects = ReflectionHelper::readPrivateProperty($client, 'followRedirects', 'Symfony\Component\BrowserKit\Client');
+            $maxRedirects = ReflectionHelper::readPrivateProperty($client, 'maxRedirects', 'Symfony\Component\BrowserKit\Client');
         }
 
         if (!$isFollowingRedirects) {
-            $result = $this->client->request($method, $uri, $parameters, $files, $server, $content, $changeHistory);
+            $result = $client->request($method, $uri, $parameters, $files, $server, $content, $changeHistory);
             $this->debugResponse($uri);
             return $result;
         }
 
-        $this->client->followRedirects(false);
-        $result = $this->client->request($method, $uri, $parameters, $files, $server, $content, $changeHistory);
+        $client->followRedirects(false);
+        $result = $client->request($method, $uri, $parameters, $files, $server, $content, $changeHistory);
         $this->debugResponse($uri);
         return $this->redirectIfNecessary($result, $maxRedirects, 0);
     }
@@ -297,8 +308,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     private function getRunningClient()
     {
+        $client = $this->getClient();
+
         try {
-            if ($this->client->getInternalRequest() === null) {
+            if ($client->getInternalRequest() === null) {
                 throw new ModuleException(
                     $this,
                     "Page not loaded. Use `\$I->amOnPage` (or hidden API methods `_request` and `_loadPage`) to open it"
@@ -311,7 +324,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                 "Page not loaded. Use `\$I->amOnPage` (or hidden API methods `_request` and `_loadPage`) to open it"
             );
         }
-        return $this->client;
+        return $client;
     }
 
     public function _savePageSource($filename)
@@ -327,8 +340,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     public function amHttpAuthenticated($username, $password)
     {
-        $this->client->setServerParameter('PHP_AUTH_USER', $username);
-        $this->client->setServerParameter('PHP_AUTH_PW', $password);
+        $client = $this->getClient();
+
+        $client->setServerParameter('PHP_AUTH_USER', $username);
+        $client->setServerParameter('PHP_AUTH_PW', $password);
     }
 
     /**
@@ -1422,7 +1437,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     public function grabTextFrom($cssOrXPathOrRegex)
     {
-        if (@preg_match($cssOrXPathOrRegex, $this->client->getInternalResponse()->getContent(), $matches)) {
+        if (@preg_match($cssOrXPathOrRegex, $this->getClient()->getInternalResponse()->getContent(), $matches)) {
             return $matches[1];
         }
         $nodes = $this->match($cssOrXPathOrRegex);
@@ -1498,7 +1513,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     public function setCookie($name, $val, array $params = [])
     {
-        $cookies = $this->client->getCookieJar();
+        $cookies = $this->getClient()->getCookieJar();
         $params = array_merge($this->defaultCookieParameters, $params);
 
         $expires      = isset($params['expiry']) ? $params['expiry'] : null; // WebDriver compatibility
@@ -1542,20 +1557,20 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     {
         $params = array_merge($this->defaultCookieParameters, $params);
         $this->debugCookieJar();
-        $this->assertNotNull($this->client->getCookieJar()->get($cookie, $params['path'], $params['domain']));
+        $this->assertNotNull($this->getClient()->getCookieJar()->get($cookie, $params['path'], $params['domain']));
     }
 
     public function dontSeeCookie($cookie, array $params = [])
     {
         $params = array_merge($this->defaultCookieParameters, $params);
         $this->debugCookieJar();
-        $this->assertNull($this->client->getCookieJar()->get($cookie, $params['path'], $params['domain']));
+        $this->assertNull($this->getClient()->getCookieJar()->get($cookie, $params['path'], $params['domain']));
     }
 
     public function resetCookie($name, array $params = [])
     {
         $params = array_merge($this->defaultCookieParameters, $params);
-        $this->client->getCookieJar()->expire($name, $params['path'], $params['domain']);
+        $this->getClient()->getCookieJar()->expire($name, $params['path'], $params['domain']);
         $this->debugCookieJar();
     }
 
@@ -1892,7 +1907,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     protected function redirectIfNecessary($result, $maxRedirects, $redirectCount)
     {
-        $locationHeader = $this->client->getInternalResponse()->getHeader('Location');
+        $locationHeader = $this->getClient()->getInternalResponse()->getHeader('Location');
         $statusCode = $this->getResponseStatusCode();
         if ($locationHeader && $statusCode >= 300 && $statusCode < 400) {
             if ($redirectCount === $maxRedirects) {
@@ -1904,11 +1919,11 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
             $this->debugSection('Redirecting to', $locationHeader);
 
-            $result = $this->client->followRedirect();
+            $result = $this->getClient()->followRedirect();
             $this->debugResponse($locationHeader);
             return $this->redirectIfNecessary($result, $maxRedirects, $redirectCount + 1);
         }
-        $this->client->followRedirects(true);
+        $this->getClient()->followRedirects(true);
         return $result;
     }
 
@@ -1979,7 +1994,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     protected function debugCookieJar()
     {
-        $cookies = $this->client->getCookieJar()->all();
+        $cookies = $this->getClient()->getCookieJar()->all();
         $cookieStrings = array_map('strval', $cookies);
         $this->debugSection('Cookie Jar', $cookieStrings);
     }
@@ -1988,7 +2003,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     {
         if (isset($this->config['cookies']) && is_array($this->config['cookies']) && !empty($this->config['cookies'])) {
             $domain = parse_url($this->config['url'], PHP_URL_HOST);
-            $cookieJar = $this->client->getCookieJar();
+            $cookieJar = $this->getClient()->getCookieJar();
             foreach ($this->config['cookies'] as &$cookie) {
                 if (!is_array($cookie) || !array_key_exists('Name', $cookie) || !array_key_exists('Value', $cookie)) {
                     throw new \InvalidArgumentException('Cookies must have at least Name and Value attributes');
@@ -2050,7 +2065,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     public function setServerParameters(array $params)
     {
-        $this->client->setServerParameters($params);
+        $this->getClient()->setServerParameters($params);
     }
 
     /**
@@ -2064,6 +2079,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     public function haveServerParameter($name, $value)
     {
-        $this->client->setServerParameter($name, $value);
+        $this->getClient()->setServerParameter($name, $value);
     }
 }
