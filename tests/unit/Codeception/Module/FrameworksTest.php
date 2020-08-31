@@ -1,5 +1,13 @@
 <?php
+
+use Codeception\Exception\ExternalUrlException;
+use Codeception\Lib\Framework;
+use Codeception\Lib\ModuleContainer;
+use Codeception\Module\UniversalFramework;
+use Codeception\Stub\Expected;
+use Codeception\Test\Cest;
 use Codeception\Util\Stub;
+use PHPUnit\Framework\AssertionFailedError;
 
 require_once __DIR__ . '/TestsForWeb.php';
 
@@ -9,14 +17,14 @@ require_once __DIR__ . '/TestsForWeb.php';
 class FrameworksTest extends TestsForWeb
 {
     /**
-     * @var \Codeception\Lib\Framework
+     * @var Framework
      */
     protected $module;
 
     public function _setUp()
     {
-        $container = \Codeception\Util\Stub::make('Codeception\Lib\ModuleContainer');
-        $this->module = new \Codeception\Module\UniversalFramework($container);
+        $container = Stub::make(ModuleContainer::class);
+        $this->module = new UniversalFramework($container);
         $this->module->_initialize();
     }
 
@@ -35,7 +43,7 @@ class FrameworksTest extends TestsForWeb
 
     public function testExceptionIsThrownOnRedirectToExternalUrl()
     {
-        $this->expectException('\Codeception\Exception\ExternalUrlException');
+        $this->expectException(ExternalUrlException::class);
         $this->module->amOnPage('/external_url');
         $this->module->click('Next');
     }
@@ -77,7 +85,7 @@ class FrameworksTest extends TestsForWeb
             try {
                 $this->module->moveBack($invalidValue);
                 $this->fail('Expected to get exception here');
-            } catch (\InvalidArgumentException $e) {
+            } catch (InvalidArgumentException $e) {
                 codecept_debug('Exception: ' . $e->getMessage());
             }
         }
@@ -85,15 +93,15 @@ class FrameworksTest extends TestsForWeb
 
     public function testCreateSnapshotOnFail()
     {
-        $container = \Codeception\Util\Stub::make('Codeception\Lib\ModuleContainer');
+        $container = Stub::make(ModuleContainer::class);
         $module = Stub::construct(get_class($this->module), [$container], [
-            '_savePageSource' => \Codeception\Stub\Expected::once(function ($filename) {
+            '_savePageSource' => Expected::once(function ($filename) {
                 $this->assertEquals(codecept_log_dir('Codeception.Module.UniversalFramework.looks.like..test.fail.html'), $filename);
             }),
         ]);
         $module->_initialize();
         $module->amOnPage('/');
-        $cest = new \Codeception\Test\Cest($this->module, 'looks:like::test', 'demo1Cest.php');
-        $module->_failed($cest, new \PHPUnit\Framework\AssertionFailedError());
+        $cest = new Cest($this->module, 'looks:like::test', 'demo1Cest.php');
+        $module->_failed($cest, new AssertionFailedError());
     }
 }

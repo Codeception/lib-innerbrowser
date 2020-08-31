@@ -2,7 +2,7 @@
     "name":"codeception/lib-innerbrowser",
     "description":"Parent library for all Codeception framework modules and PhpBrowser",
     "keywords":["codeception"],
-    "homepage":"http://codeception.com/",
+    "homepage":"https://codeception.com/",
     "type":"library",
     "license":"MIT",
     "authors":[

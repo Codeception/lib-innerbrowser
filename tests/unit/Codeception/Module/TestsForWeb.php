@@ -1,4 +1,14 @@
 <?php
+
+use Codeception\Exception\ElementNotFound;
+use Codeception\Exception\MalformedLocatorException;
+use Codeception\Exception\TestRuntimeException;
+use Codeception\Module\UniversalFramework;
+use Codeception\Step\Argument\PasswordArgument;
+use Codeception\Test\Unit;
+use Codeception\Util\Locator;
+use PHPUnit\Framework\AssertionFailedError;
+
 /**
  * Author: davert
  * Date: 13.01.12
@@ -8,10 +18,10 @@
  *
  */
 
-abstract class TestsForWeb extends \Codeception\Test\Unit
+abstract class TestsForWeb extends Unit
 {
     /**
-     * @var \Codeception\Module\UniversalFramework
+     * @var UniversalFramework
      */
     protected $module;
 
@@ -39,7 +49,6 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->dontSeeCurrentUrlMatches('~form/a~');
         $this->module->dontSeeInCurrentUrl('user');
     }
-
 
     public function testSee()
     {
@@ -92,7 +101,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testDontSeeIsCaseInsensitiveForUnicodeText()
     {
-        $this->expectException("PHPUnit\Framework\AssertionFailedError");
+        $this->expectException(AssertionFailedError::class);
         $this->module->amOnPage('/info');
         $this->module->dontSee('ссылочка');
     }
@@ -129,7 +138,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testSeeLinkFailsIfTextDoesNotMatch()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("No links containing text 'Codeception' were found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->seeLink('Codeception');
@@ -137,7 +146,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testSeeLinkFailsIfHrefDoesNotMatch()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("No links containing text 'Next' and URL '/fsdfsdf/' were found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->seeLink('Next', '/fsdfsdf/');
@@ -145,7 +154,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testSeeLinkFailsIfHrefDoesNotMatchExactly()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("No links containing text 'Next' and URL 'http://codeception' were found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->seeLink('Next', 'http://codeception');
@@ -153,7 +162,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testDontSeeLinkFailsIfTextMatches()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("Link containing text 'Next' was found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->dontSeeLink('Next');
@@ -161,7 +170,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testDontSeeLinkFailsIfTextAndUrlMatches()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("Link containing text 'Next' and URL 'http://codeception.com/' was found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->dontSeeLink('Next', 'http://codeception.com/');
@@ -176,7 +185,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testDontSeeLinkMatchesRelativeLink()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("Link containing text 'Sign in!' and URL '/login' was found in page /info");
         $this->module->amOnPage('/info');
         $this->module->dontSeeLink('Sign in!', '/login');
@@ -612,7 +621,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     public function testSeeInFormFieldsFails()
     {
         $this->module->amOnPage('/form/field_values');
-        $this->expectException("PHPUnit\Framework\AssertionFailedError");
+        $this->expectException(AssertionFailedError::class);
         $params = [
             'radio1' => 'something I should not see',
             'checkbox1' => true,
@@ -650,7 +659,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     public function testDontSeeInFormFieldsFails()
     {
         $this->module->amOnPage('/form/field_values');
-        $this->expectException("PHPUnit\Framework\AssertionFailedError");
+        $this->expectException(AssertionFailedError::class);
         $params = [
             'checkbox[]' => [
                 'wont see this anyway',
@@ -778,7 +787,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     // regression test. https://github.com/Codeception/Codeception/issues/587
     public function testSeeElementOnPageFails()
     {
-        $this->expectException("PHPUnit\Framework\AssertionFailedError");
+        $this->expectException(AssertionFailedError::class);
         $this->module->amOnPage('/form/field');
         $this->module->dontSeeElement('input[name=name]');
     }
@@ -916,7 +925,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->seeElement(['name' => 'password']);
         $this->module->seeElement(['class' => 'optional']);
         $this->module->seeElement(['css' => 'form.global_form_box']);
-        $this->module->seeElement(['xpath' => \Codeception\Util\Locator::tabIndex(4)]);
+        $this->module->seeElement(['xpath' => Locator::tabIndex(4)]);
         $this->module->fillField(['name' => 'password'], '123456');
         $this->module->amOnPage('/form/select');
         $this->module->selectOption(['name' => 'age'], 'child');
@@ -1198,7 +1207,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     protected function shouldFail()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
     }
 
     /**
@@ -1342,28 +1351,28 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
      */
     public function testWrongXpath()
     {
-        $this->expectException('Codeception\Exception\MalformedLocatorException');
+        $this->expectException(MalformedLocatorException::class);
         $this->module->amOnPage('/');
         $this->module->seeElement('//aas[asd}[sd]a[/[');
     }
 
     public function testWrongCSS()
     {
-        $this->expectException('Codeception\Exception\MalformedLocatorException');
+        $this->expectException(MalformedLocatorException::class);
         $this->module->amOnPage('/');
         $this->module->seeElement('.user#iasos<here');
     }
 
     public function testWrongStrictCSSLocator()
     {
-        $this->expectException('Codeception\Exception\MalformedLocatorException');
+        $this->expectException(MalformedLocatorException::class);
         $this->module->amOnPage('/');
         $this->module->seeElement(['css' => 'hel!1$<world']);
     }
 
     public function testWrongStrictXPathLocator()
     {
-        $this->expectException('Codeception\Exception\MalformedLocatorException');
+        $this->expectException(MalformedLocatorException::class);
         $this->module->amOnPage('/');
         $this->module->seeElement(['xpath' => 'hello<wo>rld']);
     }
@@ -1573,7 +1582,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
      */
     public function testClickThrowsElementNotFoundExceptionWhenTextContainsNumber()
     {
-        $this->expectException('Codeception\Exception\ElementNotFound');
+        $this->expectException(ElementNotFound::class);
         $this->expectExceptionMessage("'Link 2' is invalid CSS and XPath selector and Link or Button element with 'name=Link 2' was not found.");
         $this->module->amOnPage('/info');
         $this->module->click('Link 2');
@@ -1658,7 +1667,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     public function testClickButtonWithEmptyForm()
     {
         $this->module->amOnPage('/form/button-not-in-form');
-        $this->expectException(\Codeception\Exception\TestRuntimeException::class);
+        $this->expectException(TestRuntimeException::class);
         $this->module->click('Should not submit');
         $this->module->seeCurrentUrlEquals('/form/button-not-in-form');
     }
@@ -1666,21 +1675,21 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     public function testClickButtonNotInForm()
     {
         $this->module->amOnPage('/form/button-not-in-form');
-        $this->expectException(\Codeception\Exception\TestRuntimeException::class);
+        $this->expectException(TestRuntimeException::class);
         $this->module->click('Outside submit');
     }
 
     public function testClickButtonWithFormInvalidIdInside()
     {
         $this->module->amOnPage('/form/button-not-in-form');
-        $this->expectException(\Codeception\Exception\TestRuntimeException::class);
+        $this->expectException(TestRuntimeException::class);
         $this->module->click('Invalid form2');
     }
 
     public function testClickButtonWithFormInvalidIdOutside()
     {
         $this->module->amOnPage('/form/button-not-in-form');
-        $this->expectException(\Codeception\Exception\TestRuntimeException::class);
+        $this->expectException(TestRuntimeException::class);
         $this->module->click('Invalid form');
     }
 
@@ -1741,7 +1750,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     public function testPasswordArgument()
     {
         $this->module->amOnPage('/form/password_argument');
-        $this->module->fillField('password', new \Codeception\Step\Argument\PasswordArgument('thisissecret'));
+        $this->module->fillField('password', new PasswordArgument('thisissecret'));
         $this->module->click('Submit');
         $data = data::get('form');
         $this->assertEquals('thisissecret', $data['password']);

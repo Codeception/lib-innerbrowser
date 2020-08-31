@@ -1,7 +1,10 @@
 <?php
-class CrawlerConstraintTest extends \Codeception\PHPUnit\TestCase
-{
 
+use Codeception\PHPUnit\TestCase;
+use PHPUnit\Framework\AssertionFailedError;
+
+class CrawlerConstraintTest extends TestCase
+{
     /**
      * @var Codeception\PHPUnit\Constraint\Crawler
      */
@@ -23,7 +26,7 @@ class CrawlerConstraintTest extends \Codeception\PHPUnit\TestCase
         $nodes = new Symfony\Component\DomCrawler\Crawler('<p>Bye world</p><p>Bye warcraft</p>');
         try {
             $this->constraint->evaluate($nodes->filter('p'), 'selector');
-        } catch (\PHPUnit\Framework\AssertionFailedError $fail) {
+        } catch (AssertionFailedError $fail) {
             $this->assertStringContainsString(
                 "Failed asserting that any element by 'selector' on page /user",
                 $fail->getMessage()
@@ -44,7 +47,7 @@ class CrawlerConstraintTest extends \Codeception\PHPUnit\TestCase
         $nodes = new Symfony\Component\DomCrawler\Crawler($html);
         try {
             $this->constraint->evaluate($nodes->filter('p'), 'selector');
-        } catch (\PHPUnit\Framework\AssertionFailedError $fail) {
+        } catch (AssertionFailedError $fail) {
             $this->assertStringContainsString(
                 "Failed asserting that any element by 'selector' on page /user",
                 $fail->getMessage()
@@ -63,7 +66,7 @@ class CrawlerConstraintTest extends \Codeception\PHPUnit\TestCase
         $nodes = new Symfony\Component\DomCrawler\Crawler('<p>Bye world</p><p>Bye warcraft</p>');
         try {
             $this->constraint->evaluate($nodes->filter('p'), 'selector');
-        } catch (\PHPUnit\Framework\AssertionFailedError $fail) {
+        } catch (AssertionFailedError $fail) {
             $this->assertStringContainsString("Failed asserting that any element by 'selector'", $fail->getMessage());
             $this->assertStringNotContainsString("Failed asserting that any element by 'selector' on page", $fail->getMessage());
             return;
