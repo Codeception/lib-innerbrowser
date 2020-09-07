@@ -2,6 +2,9 @@
 
 namespace Codeception\Exception;
 
-class ExternalUrlException extends \Exception
+use Exception;
+
+class ExternalUrlException extends Exception
 {
+
 }
