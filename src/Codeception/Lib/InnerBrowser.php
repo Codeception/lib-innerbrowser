@@ -1254,10 +1254,8 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * If your page triggers an ajax request, you can perform it manually.
-     * This action sends a GET ajax request with specified params.
-     *
-     * See ->sendAjaxPostRequest for examples.
+     * Sends an ajax GET request with the passed parameters.
+     * See `sendAjaxPostRequest()`
      *
      * @param $uri
      * @param $params
@@ -1268,24 +1266,27 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * If your page triggers an ajax request, you can perform it manually.
-     * This action sends a POST ajax request with specified params.
-     * Additional params can be passed as array.
-     *
+     * Sends an ajax POST request with the passed parameters.
+     * The appropriate HTTP header is added automatically:
+     * `X-Requested-With: XMLHttpRequest`
      * Example:
-     *
-     * Imagine that by clicking checkbox you trigger ajax request which updates user settings.
-     * We emulate that click by running this ajax request manually.
-     *
      * ``` php
      * <?php
-     * $I->sendAjaxPostRequest('/updateSettings', array('notifications' => true)); // POST
-     * $I->sendAjaxGetRequest('/updateSettings', array('notifications' => true)); // GET
-     *
+     * $I->sendAjaxPostRequest('/add-task', ['task' => 'lorem ipsum']);
      * ```
+     * Some frameworks (e.g. Symfony) create field names in the form of an "array":
+     * `<input type="text" name="form[task]">`
+     * In this case you need to pass the fields like this:
+     * ``` php
+     * <?php
+     * $I->sendAjaxPostRequest('/add-task', ['form' => [
+     *     'task' => 'lorem ipsum',
+     *     'category' => 'miscellaneous',
+     * ]]);
+     * ```    
      *
-     * @param $uri
-     * @param $params
+     * @param string $uri
+     * @param array $params
      */
     public function sendAjaxPostRequest($uri, $params = [])
     {
@@ -1293,17 +1294,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * If your page triggers an ajax request, you can perform it manually.
-     * This action sends an ajax request with specified method and params.
-     *
+     * Sends an ajax request, using the passed HTTP method.
+     * See `sendAjaxPostRequest()`
      * Example:
-     *
-     * You need to perform an ajax request specifying the HTTP method.
-     *
      * ``` php
      * <?php
-     * $I->sendAjaxRequest('PUT', '/posts/7', array('title' => 'new title'));
-     *
+     * $I->sendAjaxRequest('PUT', '/posts/7', ['title' => 'new title']);
      * ```
      *
      * @param $method
