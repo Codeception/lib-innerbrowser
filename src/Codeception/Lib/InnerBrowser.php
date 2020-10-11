@@ -20,6 +20,7 @@ use Codeception\Util\HttpCode;
 use Codeception\Util\Locator;
 use Codeception\Util\ReflectionHelper;
 use Codeception\Util\Uri;
+use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
 use Symfony\Component\DomCrawler\Crawler;
@@ -38,29 +39,34 @@ if (!class_exists('Symfony\Component\BrowserKit\AbstractBrowser') && class_exist
 
 class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocator, ConflictsWithModule
 {
+    private $baseUrl;
+
     /**
-     * @var \Symfony\Component\DomCrawler\Crawler
+     * @var Crawler
      */
     protected $crawler;
 
-    /**
-     * @api
-     * @var \Symfony\Component\BrowserKit\AbstractBrowser
-     */
-    public $client;
+    protected $defaultCookieParameters = [
+        'expires' => null,
+        'path' => '/',
+        'domain' => '',
+        'secure' => false
+    ];
 
     /**
-     * @var array|\Symfony\Component\DomCrawler\Form[]
+     * @var array|Form[]
      */
     protected $forms = [];
 
-    public $headers = [];
-
-    protected $defaultCookieParameters = ['expires' => null, 'path' => '/', 'domain' => '', 'secure' => false];
-
     protected $internalDomains;
 
-    private $baseUrl;
+    /**
+     * @api
+     * @var AbstractBrowser
+     */
+    public $client;
+
+    public $headers = [];
 
     public function _failed(TestInterface $test, $fail)
     {
