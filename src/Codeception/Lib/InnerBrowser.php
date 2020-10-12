@@ -1,4 +1,5 @@
 <?php
+
 namespace Codeception\Lib;
 
 use Codeception\Exception\ElementNotFound;
@@ -45,7 +46,7 @@ if (!class_exists('Symfony\Component\BrowserKit\AbstractBrowser') && class_exist
     class_alias('Symfony\Component\BrowserKit\Client', 'Symfony\Component\BrowserKit\AbstractBrowser');
 }
 
-class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocator, ConflictsWithModule
+class InnerBrowser extends Module implements ConflictsWithModule, ElementLocator, PageSourceSaver, Web
 {
     use
         ConflictsWithModuleTrait,
@@ -87,7 +88,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * Clicks the link or submits the form when the button is clicked
      * @param DOMNode $node
      * @return boolean clicked something
-     * @throws ModuleException
+     * @throws ModuleException|ExternalUrlException
      */
     private function clickButton(DOMNode $node)
     {
@@ -173,6 +174,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      *
      * @param Crawler $form the form
      * @return Form
+     * @throws ModuleException
      */
     private function getFormFromCrawler(Crawler $form)
     {
@@ -245,6 +247,17 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $selector;
     }
 
+    /**
+     * @param $method
+     * @param $uri
+     * @param array $parameters
+     * @param array $files
+     * @param array $server
+     * @param null $content
+     * @param bool $changeHistory
+     * @return mixed|Crawler|null
+     * @throws ExternalUrlException|ModuleException
+     */
     protected function clientRequest(
         $method,
         $uri,
@@ -325,7 +338,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * @param $needle
      * @param string $message
-     * @throws ModuleException
      */
     protected function assertPageContains($needle, $message = '')
     {
@@ -340,7 +352,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * @param $needle
      * @param string $message
-     * @throws ModuleException
      */
     protected function assertPageNotContains($needle, $message = '')
     {
@@ -375,7 +386,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * @param $link
      * @return bool
-     * @throws ModuleException
+     * @throws ModuleException|ExternalUrlException
      */
     protected function clickByLocator($link)
     {
@@ -535,6 +546,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      *
      * @param Crawler $node
      * @return Form
+     * @throws ModuleException
      */
     protected function getFormFor(Crawler $node)
     {
@@ -646,7 +658,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * @return string
-     * @throws ModuleException
      */
     protected function getNormalizedResponseContent()
     {
