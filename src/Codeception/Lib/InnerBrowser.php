@@ -1134,6 +1134,14 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
     }
 
+    public function _after(TestInterface $test)
+    {
+        $this->client = null;
+        $this->crawler = null;
+        $this->forms = [];
+        $this->headers = [];
+    }
+
     public function _failed(TestInterface $test, $fail)
     {
         try {
@@ -1171,53 +1179,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $test->getMetadata()->addReport('response', $report);
     }
 
-    public function _after(TestInterface $test)
-    {
-        $this->client = null;
-        $this->crawler = null;
-        $this->forms = [];
-        $this->headers = [];
-    }
-
     /**
-     * Send custom request to a backend using method, uri, parameters, etc.
-     * Use it in Helpers to create special request actions, like accessing API
-     * Returns a string with response body.
-     *
-     * ```php
-     * <?php
-     * // in Helper class
-     * public function createUserByApi($name) {
-     *     $userData = $this->getModule('{{MODULE_NAME}}')->_request('POST', '/api/v1/users', ['name' => $name]);
-     *     $user = json_decode($userData);
-     *     return $user->id;
-     * }
-     * ?>
-     * ```
-     * Does not load the response into the module so you can't interact with response page (click, fill forms).
-     * To load arbitrary page for interaction, use `_loadPage` method.
-     *
-     * @api
-     * @param $method
-     * @param $uri
-     * @param array $parameters
-     * @param array $files
-     * @param array $server
-     * @param null $content
-     * @return mixed|Crawler
-     * @throws ExternalUrlException
-     * @see `_loadPage`
+     * @return string
      */
-    public function _request(
-        $method,
-        $uri,
-        array $parameters = [],
-        array $files = [],
-        array $server = [],
-        $content = null
-    ) {
-        $this->clientRequest($method, $uri, $parameters, $files, $server, $content, true);
-        return $this->_getResponseContent();
+    public function _getCurrentUri()
+    {
+        return Uri::retrieveUri($this->getRunningClient()->getHistory()->current()->getUri());
     }
 
     /**
@@ -1236,11 +1203,18 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      *
      * @api
      * @return string
-     * @throws ModuleException
      */
     public function _getResponseContent()
     {
         return (string)$this->getRunningClient()->getInternalResponse()->getContent();
+    }
+
+    /**
+     * @return int|string
+     */
+    public function _getResponseStatusCode()
+    {
+        return $this->getResponseStatusCode();
     }
 
     /**
@@ -1278,6 +1252,46 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
+     * Send custom request to a backend using method, uri, parameters, etc.
+     * Use it in Helpers to create special request actions, like accessing API
+     * Returns a string with response body.
+     *
+     * ```php
+     * <?php
+     * // in Helper class
+     * public function createUserByApi($name) {
+     *     $userData = $this->getModule('{{MODULE_NAME}}')->_request('POST', '/api/v1/users', ['name' => $name]);
+     *     $user = json_decode($userData);
+     *     return $user->id;
+     * }
+     * ?>
+     * ```
+     * Does not load the response into the module so you can't interact with response page (click, fill forms).
+     * To load arbitrary page for interaction, use `_loadPage` method.
+     *
+     * @api
+     * @param $method
+     * @param $uri
+     * @param array $parameters
+     * @param array $files
+     * @param array $server
+     * @param null $content
+     * @return mixed|Crawler
+     * @see `_loadPage`
+     */
+    public function _request(
+        $method,
+        $uri,
+        array $parameters = [],
+        array $files = [],
+        array $server = [],
+        $content = null
+    ) {
+        $this->clientRequest($method, $uri, $parameters, $files, $server, $content, true);
+        return $this->_getResponseContent();
+    }
+
+    /**
      * Authenticates user for HTTP_AUTH
      *
      * @param $username
@@ -1287,6 +1301,51 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     {
         $this->client->setServerParameter('PHP_AUTH_USER', $username);
         $this->client->setServerParameter('PHP_AUTH_PW', $password);
+    }
+
+    /**
+     * Deletes the header with the passed name.  Subsequent requests
+     * will not have the deleted header in its request.
+     *
+     * Example:
+     * ```php
+     * <?php
+     * $I->haveHttpHeader('X-Requested-With', 'Codeception');
+     * $I->amOnPage('test-headers.php');
+     * // ...
+     * $I->deleteHeader('X-Requested-With');
+     * $I->amOnPage('some-other-page.php');
+     * ?>
+     * ```
+     *
+     * @param string $name the name of the header to delete.
+     */
+    public function deleteHeader($name)
+    {
+        $name = implode('-', array_map('ucfirst', explode('-', strtolower(str_replace('_', '-', $name)))));
+        unset($this->headers[$name]);
+    }
+
+    /**
+     * Checks that response code is equal to value provided.
+     *
+     * ```php
+     * <?php
+     * $I->dontSeeResponseCodeIs(200);
+     *
+     * // recommended \Codeception\Util\HttpCode
+     * $I->dontSeeResponseCodeIs(\Codeception\Util\HttpCode::OK);
+     * ```
+     *
+     * @param $code
+     */
+    public function dontSeeResponseCodeIs($code)
+    {
+        $failureMessage = sprintf(
+            'Expected HTTP status code other than %s',
+            HttpCode::getDescription($code)
+        );
+        $this->assertNotEquals($code, $this->getResponseStatusCode(), $failureMessage);
     }
 
     /**
@@ -1323,98 +1382,51 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * Deletes the header with the passed name.  Subsequent requests
-     * will not have the deleted header in its request.
+     * Sets SERVER parameter valid for all next requests.
      *
-     * Example:
      * ```php
-     * <?php
-     * $I->haveHttpHeader('X-Requested-With', 'Codeception');
-     * $I->amOnPage('test-headers.php');
-     * // ...
-     * $I->deleteHeader('X-Requested-With');
-     * $I->amOnPage('some-other-page.php');
-     * ?>
+     * $I->haveServerParameter('name', 'value');
      * ```
-     *
-     * @param string $name the name of the header to delete.
+     * @param $name
+     * @param $value
      */
-    public function deleteHeader($name)
+    public function haveServerParameter($name, $value)
     {
-        $name = implode('-', array_map('ucfirst', explode('-', strtolower(str_replace('_', '-', $name)))));
-        unset($this->headers[$name]);
+        $this->client->setServerParameter($name, $value);
     }
 
     /**
-     * @return string
-     * @throws ModuleException
-     */
-    public function _getCurrentUri()
-    {
-        return Uri::retrieveUri($this->getRunningClient()->getHistory()->current()->getUri());
-    }
-
-    /**
-     * Sends an ajax GET request with the passed parameters.
-     * See `sendAjaxPostRequest()`
+     * Moves back in history.
      *
-     * @param $uri
-     * @param $params
+     * @param int $numberOfSteps (default value 1)
      */
-    public function sendAjaxGetRequest($uri, $params = [])
+    public function moveBack($numberOfSteps = 1)
     {
-        $this->sendAjaxRequest('GET', $uri, $params);
-    }
-
-    /**
-     * Sends an ajax POST request with the passed parameters.
-     * The appropriate HTTP header is added automatically:
-     * `X-Requested-With: XMLHttpRequest`
-     * Example:
-     * ``` php
-     * <?php
-     * $I->sendAjaxPostRequest('/add-task', ['task' => 'lorem ipsum']);
-     * ```
-     * Some frameworks (e.g. Symfony) create field names in the form of an "array":
-     * `<input type="text" name="form[task]">`
-     * In this case you need to pass the fields like this:
-     * ``` php
-     * <?php
-     * $I->sendAjaxPostRequest('/add-task', ['form' => [
-     *     'task' => 'lorem ipsum',
-     *     'category' => 'miscellaneous',
-     * ]]);
-     * ```    
-     *
-     * @param string $uri
-     * @param array $params
-     */
-    public function sendAjaxPostRequest($uri, $params = [])
-    {
-        $this->sendAjaxRequest('POST', $uri, $params);
-    }
-
-    /**
-     * Sends an ajax request, using the passed HTTP method.
-     * See `sendAjaxPostRequest()`
-     * Example:
-     * ``` php
-     * <?php
-     * $I->sendAjaxRequest('PUT', '/posts/7', ['title' => 'new title']);
-     * ```
-     *
-     * @param $method
-     * @param $uri
-     * @param $params
-     */
-    public function sendAjaxRequest($method, $uri, $params = [])
-    {
-        $this->clientRequest($method, $uri, $params, [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'], null, false);
-    }
-
-    public function _getResponseStatusCode()
-    {
-        return $this->getResponseStatusCode();
+        if (!is_int($numberOfSteps) || $numberOfSteps < 1) {
+            throw new InvalidArgumentException('numberOfSteps must be positive integer');
+        }
+        try {
+            $history = $this->getRunningClient()->getHistory();
+            for ($i = $numberOfSteps; $i > 0; $i--) {
+                $request = $history->back();
+            }
+        } catch (LogicException $e) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'numberOfSteps is set to %d, but there are only %d previous steps in the history',
+                    $numberOfSteps,
+                    $numberOfSteps - $i
+                )
+            );
+        }
+        $this->_loadPage(
+            $request->getMethod(),
+            $request->getUri(),
+            $request->getParameters(),
+            $request->getFiles(),
+            $request->getServer(),
+            $request->getContent()
+        );
     }
 
     /**
@@ -1467,32 +1479,11 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * Checks that response code is equal to value provided.
-     *
-     * ```php
-     * <?php
-     * $I->dontSeeResponseCodeIs(200);
-     *
-     * // recommended \Codeception\Util\HttpCode
-     * $I->dontSeeResponseCodeIs(\Codeception\Util\HttpCode::OK);
-     * ```
-     * @param $code
+     * Checks that the response code is 4xx
      */
-    public function dontSeeResponseCodeIs($code)
+    public function seeResponseCodeIsClientError()
     {
-        $failureMessage = sprintf(
-            'Expected HTTP status code other than %s',
-            HttpCode::getDescription($code)
-        );
-        $this->assertNotEquals($code, $this->getResponseStatusCode(), $failureMessage);
-    }
-
-    /**
-     * Checks that the response code 2xx
-     */
-    public function seeResponseCodeIsSuccessful()
-    {
-        $this->seeResponseCodeIsBetween(200, 299);
+        $this->seeResponseCodeIsBetween(400, 499);
     }
 
     /**
@@ -1504,14 +1495,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * Checks that the response code is 4xx
-     */
-    public function seeResponseCodeIsClientError()
-    {
-        $this->seeResponseCodeIsBetween(400, 499);
-    }
-
-    /**
      * Checks that the response code is 5xx
      */
     public function seeResponseCodeIsServerError()
@@ -1520,68 +1503,73 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * Switch to iframe or frame on the page.
-     *
-     * Example:
-     * ``` html
-     * <iframe name="another_frame" src="http://example.com">
-     * ```
-     *
-     * ``` php
-     * <?php
-     * # switch to iframe
-     * $I->switchToIframe("another_frame");
-     * ```
-     *
-     * @param string $name
+     * Checks that the response code 2xx
      */
-
-    public function switchToIframe($name)
+    public function seeResponseCodeIsSuccessful()
     {
-        $iframe = $this->match("iframe[name=$name]")->first();
-        if (!count($iframe)) {
-            $iframe = $this->match("frame[name=$name]")->first();
-        }
-        if (!count($iframe)) {
-            throw new ElementNotFound("name=$name", 'Iframe');
-        }
-
-        $uri = $iframe->getNode(0)->getAttribute('src');
-        $this->amOnPage($uri);
+        $this->seeResponseCodeIsBetween(200, 299);
     }
 
     /**
-     * Moves back in history.
+     * If your page triggers an ajax request, you can perform it manually.
+     * This action sends a GET ajax request with specified params.
      *
-     * @param int $numberOfSteps (default value 1)
+     * See ->sendAjaxPostRequest for examples.
+     *
+     * @param $uri
+     * @param array $params
      */
-    public function moveBack($numberOfSteps = 1)
+    public function sendAjaxGetRequest($uri, $params = [])
     {
-        if (!is_int($numberOfSteps) || $numberOfSteps < 1) {
-            throw new InvalidArgumentException('numberOfSteps must be positive integer');
-        }
-        try {
-            $history = $this->getRunningClient()->getHistory();
-            for ($i = $numberOfSteps; $i > 0; $i--) {
-                $request = $history->back();
-            }
-        } catch (LogicException $e) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'numberOfSteps is set to %d, but there are only %d previous steps in the history',
-                    $numberOfSteps,
-                    $numberOfSteps - $i
-                )
-            );
-        }
-        $this->_loadPage(
-            $request->getMethod(),
-            $request->getUri(),
-            $request->getParameters(),
-            $request->getFiles(),
-            $request->getServer(),
-            $request->getContent()
-        );
+        $this->sendAjaxRequest('GET', $uri, $params);
+    }
+
+    /**
+     * If your page triggers an ajax request, you can perform it manually.
+     * This action sends a POST ajax request with specified params.
+     * Additional params can be passed as array.
+     *
+     * Example:
+     *
+     * Imagine that by clicking checkbox you trigger ajax request which updates user settings.
+     * We emulate that click by running this ajax request manually.
+     *
+     * ``` php
+     * <?php
+     * $I->sendAjaxPostRequest('/updateSettings', array('notifications' => true)); // POST
+     * $I->sendAjaxGetRequest('/updateSettings', array('notifications' => true)); // GET
+     *
+     * ```
+     *
+     * @param $uri
+     * @param array $params
+     */
+    public function sendAjaxPostRequest($uri, $params = [])
+    {
+        $this->sendAjaxRequest('POST', $uri, $params);
+    }
+
+    /**
+     * If your page triggers an ajax request, you can perform it manually.
+     * This action sends an ajax request with specified method and params.
+     *
+     * Example:
+     *
+     * You need to perform an ajax request specifying the HTTP method.
+     *
+     * ``` php
+     * <?php
+     * $I->sendAjaxRequest('PUT', '/posts/7', array('title' => 'new title'));
+     *
+     * ```
+     *
+     * @param $method
+     * @param $uri
+     * @param array $params
+     */
+    public function sendAjaxRequest($method, $uri, $params = [])
+    {
+        $this->clientRequest($method, $uri, $params, [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'], null, false);
     }
 
     /**
@@ -1599,16 +1587,32 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * Sets SERVER parameter valid for all next requests.
+     * Switch to iframe or frame on the page.
      *
-     * ```php
-     * $I->haveServerParameter('name', 'value');
+     * Example:
+     * ``` html
+     * <iframe name="another_frame" src="http://example.com">
      * ```
+     *
+     * ``` php
+     * <?php
+     * # switch to iframe
+     * $I->switchToIframe("another_frame");
+     * ```
+     *
      * @param $name
-     * @param $value
      */
-    public function haveServerParameter($name, $value)
+    public function switchToIframe($name)
     {
-        $this->client->setServerParameter($name, $value);
+        $iframe = $this->match("iframe[name=$name]")->first();
+        if (!count($iframe)) {
+            $iframe = $this->match("frame[name=$name]")->first();
+        }
+        if (!count($iframe)) {
+            throw new ElementNotFound("name=$name", 'Iframe');
+        }
+
+        $uri = $iframe->getNode(0)->getAttribute('src');
+        $this->amOnPage($uri);
     }
 }
