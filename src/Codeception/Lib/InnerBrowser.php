@@ -20,6 +20,8 @@ use Codeception\Util\HttpCode;
 use Codeception\Util\Locator;
 use Codeception\Util\ReflectionHelper;
 use Codeception\Util\Uri;
+use DOMDocument;
+use DOMNode;
 use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
@@ -67,6 +69,168 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     public $client;
 
     public $headers = [];
+
+    /**
+     * Clicks the link or submits the form when the button is clicked
+     * @param DOMNode $node
+     * @return boolean clicked something
+     * @throws ModuleException
+     */
+    private function clickButton(DOMNode $node)
+    {
+        /**
+         * First we check if the button is associated to a form.
+         * It is associated to a form when it has a nonempty form
+         */
+        $formAttribute = $node->attributes->getNamedItem('form');
+        if (isset($formAttribute)) {
+            $form = empty($formAttribute->nodeValue) ? null : $this->filterByCSS('#' . $formAttribute->nodeValue)->getNode(0);
+        } else {
+            // Check parents
+            $currentNode = $node;
+            $form = null;
+            while ($currentNode->parentNode !== null) {
+                $currentNode = $currentNode->parentNode;
+                if ($currentNode->nodeName === 'form') {
+                    $form = $node;
+                    break;
+                }
+            }
+        }
+
+        if (isset($form)) {
+            $buttonName = $node->getAttribute('name');
+            if ($buttonName !== '') {
+                $formParams = [$buttonName => $node->getAttribute('value')];
+            } else {
+                $formParams = [];
+            }
+            $this->proceedSubmitForm(
+                new Crawler($form, $this->getAbsoluteUrlFor($this->_getCurrentUri()), $this->getBaseUrl()),
+                $formParams
+            );
+            return true;
+        }
+
+        // Check if the button is inside an anchor.
+        $currentNode = $node;
+        while ($currentNode->parentNode !== null) {
+            $currentNode = $currentNode->parentNode;
+            if ($currentNode->nodeName === 'a') {
+                $this->openHrefFromDomNode($currentNode);
+                return true;
+            }
+        }
+        throw new TestRuntimeException('Button is not inside a link or a form');
+    }
+
+    private function getBaseUrl()
+    {
+        return $this->baseUrl;
+    }
+
+    /**
+     * @return Crawler
+     * @throws ModuleException
+     */
+    private function getCrawler()
+    {
+        if (!$this->crawler) {
+            throw new ModuleException($this, 'Crawler is null. Perhaps you forgot to call "amOnPage"?');
+        }
+        return $this->crawler;
+    }
+
+    /**
+     * Returns a crawler Form object for the form pointed to by the
+     * passed Crawler.
+     *
+     * The returned form is an independent Crawler created to take care
+     * of the following issues currently experienced by Crawler's form
+     * object:
+     *  - input fields disabled at a higher level (e.g. by a surrounding
+     *    fieldset) still return values
+     *  - Codeception expects an empty value to match an unselected
+     *    select box.
+     *
+     * The function clones the crawler's node and creates a new crawler
+     * because it destroys or adds to the DOM for the form to achieve
+     * the desired functionality.  Other functions simply querying the
+     * DOM wouldn't expect them.
+     *
+     * @param Crawler $form the form
+     * @return Form
+     */
+    private function getFormFromCrawler(Crawler $form)
+    {
+        $fakeDom = new DOMDocument();
+        $fakeDom->appendChild($fakeDom->importNode($form->getNode(0), true));
+        $node = $fakeDom->documentElement;
+        $action = (string)$this->getFormUrl($form);
+        $cloned = new Crawler($node, $action, $this->getBaseUrl());
+        $shouldDisable = $cloned->filter(
+            'input:disabled:not([disabled]),select option:disabled,select optgroup:disabled option:not([disabled]),textarea:disabled:not([disabled]),select:disabled:not([disabled])'
+        );
+        foreach ($shouldDisable as $field) {
+            $field->parentNode->removeChild($field);
+        }
+        return $cloned->form();
+    }
+
+    /**
+     * @return AbstractBrowser
+     * @throws ModuleException
+     */
+    private function getRunningClient()
+    {
+        try {
+            if ($this->client->getInternalRequest() === null) {
+                throw new ModuleException(
+                    $this,
+                    "Page not loaded. Use `\$I->amOnPage` (or hidden API methods `_request` and `_loadPage`) to open it"
+                );
+            }
+        } catch (BadMethodCallException $e) {
+            //Symfony 5
+            throw new ModuleException(
+                $this,
+                "Page not loaded. Use `\$I->amOnPage` (or hidden API methods `_request` and `_loadPage`) to open it"
+            );
+        }
+        return $this->client;
+    }
+
+    private function openHrefFromDomNode(DOMNode $node)
+    {
+        $link = new Link($node, $this->getBaseUrl());
+        $this->amOnPage(preg_replace('/#.*/', '', $link->getUri()));
+    }
+
+    /**
+     * @return string
+     * @throws ModuleException
+     */
+    private function retrieveBaseUrl()
+    {
+        $baseUrl = '';
+
+        $baseHref = $this->crawler->filter('base');
+        if (count($baseHref) > 0) {
+            $baseUrl = $baseHref->getNode(0)->getAttribute('href');
+        }
+        if ($baseUrl === '') {
+            $baseUrl = $this->_getCurrentUri();
+        }
+        return $this->getAbsoluteUrlFor($baseUrl);
+    }
+
+    private function stringifySelector($selector)
+    {
+        if (is_array($selector)) {
+            return trim(json_encode($selector), '{}');
+        }
+        return $selector;
+    }
 
     public function _failed(TestInterface $test, $fail)
     {
@@ -289,37 +453,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->forms = [];
     }
 
-    /**
-     * @return Crawler
-     * @throws ModuleException
-     */
-    private function getCrawler()
-    {
-        if (!$this->crawler) {
-            throw new ModuleException($this, 'Crawler is null. Perhaps you forgot to call "amOnPage"?');
-        }
-        return $this->crawler;
-    }
-
-    private function getRunningClient()
-    {
-        try {
-            if ($this->client->getInternalRequest() === null) {
-                throw new ModuleException(
-                    $this,
-                    "Page not loaded. Use `\$I->amOnPage` (or hidden API methods `_request` and `_loadPage`) to open it"
-                );
-            }
-        } catch (BadMethodCallException $e) {
-            //Symfony 5
-            throw new ModuleException(
-                $this,
-                "Page not loaded. Use `\$I->amOnPage` (or hidden API methods `_request` and `_loadPage`) to open it"
-            );
-        }
-        return $this->client;
-    }
-
     public function _savePageSource($filename)
     {
         file_put_contents($filename, $this->_getResponseContent());
@@ -457,85 +590,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                 return $this->clickButton($node);
             }
         }
-    }
-
-
-    /**
-     * Clicks the link or submits the form when the button is clicked
-     * @param \DOMNode $node
-     * @return boolean clicked something
-     */
-    private function clickButton(\DOMNode $node)
-    {
-        /**
-         * First we check if the button is associated to a form.
-         * It is associated to a form when it has a nonempty form
-         */
-        $formAttribute = $node->attributes->getNamedItem('form');
-        if (isset($formAttribute)) {
-            $form = empty($formAttribute->nodeValue) ? null : $this->filterByCSS('#' . $formAttribute->nodeValue)->getNode(0);
-        } else {
-            // Check parents
-            $currentNode = $node;
-            $form = null;
-            while ($currentNode->parentNode !== null) {
-                $currentNode = $currentNode->parentNode;
-                if ($currentNode->nodeName === 'form') {
-                    $form = $node;
-                    break;
-                }
-            }
-        }
-
-        if (isset($form)) {
-            $buttonName = $node->getAttribute('name');
-            if ($buttonName !== '') {
-                $formParams = [$buttonName => $node->getAttribute('value')];
-            } else {
-                $formParams = [];
-            }
-            $this->proceedSubmitForm(
-                new Crawler($form, $this->getAbsoluteUrlFor($this->_getCurrentUri()), $this->getBaseUrl()),
-                $formParams
-            );
-            return true;
-        }
-
-        // Check if the button is inside an anchor.
-        $currentNode = $node;
-        while ($currentNode->parentNode !== null) {
-            $currentNode = $currentNode->parentNode;
-            if ($currentNode->nodeName === 'a') {
-                $this->openHrefFromDomNode($currentNode);
-                return true;
-            }
-        }
-        throw new TestRuntimeException('Button is not inside a link or a form');
-    }
-
-    private function openHrefFromDomNode(\DOMNode $node)
-    {
-        $link = new Link($node, $this->getBaseUrl());
-        $this->amOnPage(preg_replace('/#.*/', '', $link->getUri()));
-    }
-
-    private function getBaseUrl()
-    {
-        return $this->baseUrl;
-    }
-
-    private function retrieveBaseUrl()
-    {
-        $baseUrl = '';
-
-        $baseHref = $this->crawler->filter('base');
-        if (count($baseHref) > 0) {
-            $baseUrl = $baseHref->getNode(0)->getAttribute('href');
-        }
-        if ($baseUrl === '') {
-            $baseUrl = $this->_getCurrentUri();
-        }
-        return $this->getAbsoluteUrlFor($baseUrl);
     }
 
     public function see($text, $selector = null)
@@ -983,42 +1037,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     {
         $action = $form->form()->getUri();
         return $this->getAbsoluteUrlFor($action);
-    }
-
-    /**
-     * Returns a crawler Form object for the form pointed to by the
-     * passed Crawler.
-     *
-     * The returned form is an independent Crawler created to take care
-     * of the following issues currently experienced by Crawler's form
-     * object:
-     *  - input fields disabled at a higher level (e.g. by a surrounding
-     *    fieldset) still return values
-     *  - Codeception expects an empty value to match an unselected
-     *    select box.
-     *
-     * The function clones the crawler's node and creates a new crawler
-     * because it destroys or adds to the DOM for the form to achieve
-     * the desired functionality.  Other functions simply querying the
-     * DOM wouldn't expect them.
-     *
-     * @param Crawler $form the form
-     * @return Form
-     */
-    private function getFormFromCrawler(Crawler $form)
-    {
-        $fakeDom = new \DOMDocument();
-        $fakeDom->appendChild($fakeDom->importNode($form->getNode(0), true));
-        $node = $fakeDom->documentElement;
-        $action = (string)$this->getFormUrl($form);
-        $cloned = new Crawler($node, $action, $this->getBaseUrl());
-        $shouldDisable = $cloned->filter(
-            'input:disabled:not([disabled]),select option:disabled,select optgroup:disabled option:not([disabled]),textarea:disabled:not([disabled]),select:disabled:not([disabled])'
-        );
-        foreach ($shouldDisable as $field) {
-            $field->parentNode->removeChild($field);
-        }
-        return $cloned->form();
     }
 
     /**
@@ -1559,14 +1577,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $params = array_merge($this->defaultCookieParameters, $params);
         $this->client->getCookieJar()->expire($name, $params['path'], $params['domain']);
         $this->debugCookieJar();
-    }
-
-    private function stringifySelector($selector)
-    {
-        if (is_array($selector)) {
-            return trim(json_encode($selector), '{}');
-        }
-        return $selector;
     }
 
     public function seeElement($selector, $attributes = [])
