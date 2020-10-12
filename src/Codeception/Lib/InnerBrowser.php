@@ -22,6 +22,8 @@ use Codeception\Util\ReflectionHelper;
 use Codeception\Util\Uri;
 use DOMDocument;
 use DOMNode;
+use InvalidArgumentException;
+use LogicException;
 use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
@@ -232,6 +234,895 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $selector;
     }
 
+    protected function clientRequest(
+        $method,
+        $uri,
+        array $parameters = [],
+        array $files = [],
+        array $server = [],
+        $content = null,
+        $changeHistory = true
+    ) {
+        $this->debugSection('Request Headers', $this->headers);
+
+        foreach ($this->headers as $header => $val) { // moved from REST module
+
+            if ($val === null || $val === '') {
+                continue;
+            }
+
+            $header = str_replace('-', '_', strtoupper($header));
+            $server["HTTP_$header"] = $val;
+
+            // Issue #827 - symfony foundation requires 'CONTENT_TYPE' without HTTP_
+            if ($this instanceof Framework && $header === 'CONTENT_TYPE') {
+                $server[$header] = $val;
+            }
+        }
+        $server['REQUEST_TIME'] = time();
+        $server['REQUEST_TIME_FLOAT'] = microtime(true);
+        if ($this instanceof Framework) {
+            if (preg_match('#^(//|https?://(?!localhost))#', $uri)) {
+                $hostname = parse_url($uri, PHP_URL_HOST);
+                if (!$this->isInternalDomain($hostname)) {
+                    throw new ExternalUrlException(get_class($this) . " can't open external URL: " . $uri);
+                }
+            }
+
+            if ($method !== 'GET' && $content === null && !empty($parameters)) {
+                $content = http_build_query($parameters);
+            }
+        }
+
+        if (method_exists($this->client, 'isFollowingRedirects')) {
+            $isFollowingRedirects = $this->client->isFollowingRedirects();
+            $maxRedirects = $this->client->getMaxRedirects();
+        } else {
+            //Symfony 2.7 support
+            $isFollowingRedirects = ReflectionHelper::readPrivateProperty(
+                $this->client, 'followRedirects', 'Symfony\Component\BrowserKit\Client'
+            );
+            $maxRedirects = ReflectionHelper::readPrivateProperty(
+                $this->client, 'maxRedirects', 'Symfony\Component\BrowserKit\Client'
+            );
+        }
+
+        if (!$isFollowingRedirects) {
+            $result = $this->client->request($method, $uri, $parameters, $files, $server, $content, $changeHistory);
+            $this->debugResponse($uri);
+            return $result;
+        }
+
+        $this->client->followRedirects(false);
+        $result = $this->client->request($method, $uri, $parameters, $files, $server, $content, $changeHistory);
+        $this->debugResponse($uri);
+        return $this->redirectIfNecessary($result, $maxRedirects, 0);
+    }
+
+    protected function assertDomContains($nodes, $message, $text = '')
+    {
+        $constraint = new CrawlerConstraint($text, $this->_getCurrentUri());
+        $this->assertThat($nodes, $constraint, $message);
+    }
+
+    protected function assertDomNotContains($nodes, $message, $text = '')
+    {
+        $constraint = new CrawlerNotConstraint($text, $this->_getCurrentUri());
+        $this->assertThat($nodes, $constraint, $message);
+    }
+
+    /**
+     * @param $needle
+     * @param string $message
+     * @throws ModuleException
+     */
+    protected function assertPageContains($needle, $message = '')
+    {
+        $constraint = new PageConstraint($needle, $this->_getCurrentUri());
+        $this->assertThat(
+            $this->getNormalizedResponseContent(),
+            $constraint,
+            $message
+        );
+    }
+
+    /**
+     * @param $needle
+     * @param string $message
+     * @throws ModuleException
+     */
+    protected function assertPageNotContains($needle, $message = '')
+    {
+        $constraint = new PageConstraint($needle, $this->_getCurrentUri());
+        $this->assertThatItsNot(
+            $this->getNormalizedResponseContent(),
+            $constraint,
+            $message
+        );
+    }
+
+    protected function assertPageSourceContains($needle, $message = '')
+    {
+        $constraint = new PageConstraint($needle, $this->_getCurrentUri());
+        $this->assertThat(
+            $this->_getResponseContent(),
+            $constraint,
+            $message
+        );
+    }
+
+    protected function assertPageSourceNotContains($needle, $message = '')
+    {
+        $constraint = new PageConstraint($needle, $this->_getCurrentUri());
+        $this->assertThatItsNot(
+            $this->_getResponseContent(),
+            $constraint,
+            $message
+        );
+    }
+
+    /**
+     * @param $link
+     * @return bool
+     * @throws ModuleException
+     */
+    protected function clickByLocator($link)
+    {
+        $nodes = $this->match($link);
+        if (!$nodes->count()) {
+            throw new ElementNotFound($link, 'Link or Button by name or CSS or XPath');
+        }
+
+        foreach ($nodes as $node) {
+            $tag = $node->tagName;
+            $type = $node->getAttribute('type');
+
+            if ($tag === 'a') {
+                $this->openHrefFromDomNode($node);
+                return true;
+            }
+
+            if (in_array($tag, ['input', 'button']) && in_array($type, ['submit', 'image'])) {
+                return $this->clickButton($node);
+            }
+        }
+    }
+
+    protected function debugCookieJar()
+    {
+        $cookies = $this->client->getCookieJar()->all();
+        $cookieStrings = array_map('strval', $cookies);
+        $this->debugSection('Cookie Jar', $cookieStrings);
+    }
+
+    /**
+     * @param $url
+     * @throws ModuleException
+     */
+    protected function debugResponse($url)
+    {
+        $this->debugSection('Page', $url);
+        $this->debugSection('Response', $this->getResponseStatusCode());
+        $this->debugSection('Request Cookies', $this->getRunningClient()->getInternalRequest()->getCookies());
+        $this->debugSection('Response Headers', $this->getRunningClient()->getInternalResponse()->getHeaders());
+    }
+
+    protected function filterByAttributes(Crawler $nodes, array $attributes)
+    {
+        foreach ($attributes as $attr => $val) {
+            $nodes = $nodes->reduce(
+                static function (Crawler $node) use ($attr, $val) {
+                    return $node->attr($attr) === $val;
+                }
+            );
+        }
+        return $nodes;
+    }
+
+    /**
+     * @param $locator
+     * @return Crawler
+     * @throws ModuleException
+     */
+    protected function filterByCSS($locator)
+    {
+        if (!Locator::isCSS($locator)) {
+            throw new MalformedLocatorException($locator, 'css');
+        }
+        return $this->getCrawler()->filter($locator);
+    }
+
+    /**
+     * @param $locator
+     * @return Crawler
+     * @throws ModuleException
+     */
+    protected function filterByXPath($locator)
+    {
+        if (!Locator::isXPath($locator)) {
+            throw new MalformedLocatorException($locator, 'xpath');
+        }
+        return $this->getCrawler()->filterXPath($locator);
+    }
+
+    /**
+     * Returns an absolute URL for the passed URI with the current URL
+     * as the base path.
+     *
+     * @param string $uri the absolute or relative URI
+     * @return string the absolute URL
+     * @throws TestRuntimeException|ModuleException if either the current
+     *         URL or the passed URI can't be parsed
+     */
+    protected function getAbsoluteUrlFor($uri)
+    {
+        $currentUrl = $this->getRunningClient()->getHistory()->current()->getUri();
+        if (empty($uri) || strpos($uri, '#') === 0) {
+            return $currentUrl;
+        }
+        return Uri::mergeUrls($currentUrl, $uri);
+    }
+
+    /**
+     * @param $field
+     * @return object|Crawler
+     * @throws ModuleException
+     */
+    protected function getFieldByLabelOrCss($field)
+    {
+        $input = $this->getFieldsByLabelOrCss($field);
+        return $input->first();
+    }
+
+    /**
+     * @param $field
+     *
+     * @return Crawler
+     * @throws ModuleException
+     */
+    protected function getFieldsByLabelOrCss($field)
+    {
+        if (is_array($field)) {
+            $input = $this->strictMatch($field);
+            if (!count($input)) {
+                throw new ElementNotFound($field);
+            }
+            return $input;
+        }
+
+        // by label
+        $label = $this->strictMatch(['xpath' => sprintf('.//label[descendant-or-self::node()[text()[normalize-space()=%s]]]', Crawler::xpathLiteral($field))]);
+        if (count($label)) {
+            $label = $label->first();
+            if ($label->attr('for')) {
+                $input = $this->strictMatch(['id' => $label->attr('for')]);
+            } else {
+                $input = $this->strictMatch(['xpath' => sprintf('.//label[descendant-or-self::node()[text()[normalize-space()=%s]]]//input', Crawler::xpathLiteral($field))]);
+            }
+        }
+
+        // by name
+        if (!isset($input)) {
+            $input = $this->strictMatch(['name' => $field]);
+        }
+
+        // by CSS and XPath
+        if (!count($input)) {
+            $input = $this->match($field);
+        }
+
+        if (!count($input)) {
+            throw new ElementNotFound($field, 'Form field by Label or CSS');
+        }
+
+        return $input;
+    }
+
+    /**
+     * Returns the DomCrawler\Form object for the form pointed to by
+     * $node or its closes form parent.
+     *
+     * @param Crawler $node
+     * @return Form
+     */
+    protected function getFormFor(Crawler $node)
+    {
+        if (strcasecmp($node->first()->getNode(0)->tagName, 'form') === 0) {
+            $form = $node->first();
+        } else {
+            $form = $node->parents()->filter('form')->first();
+        }
+        if (!$form) {
+            $this->fail('The selected node is not a form and does not have a form ancestor.');
+        }
+
+        $identifier = $form->attr('id') ?: $form->attr('action');
+        if (!isset($this->forms[$identifier])) {
+            $this->forms[$identifier] = $this->getFormFromCrawler($form);
+        }
+        return $this->forms[$identifier];
+    }
+
+    /**
+     * Returns the form action's absolute URL.
+     *
+     * @param Crawler $form
+     * @return string
+     * @throws TestRuntimeException|ModuleException if either the current
+     *         URL or the URI of the form's action can't be parsed
+     */
+    protected function getFormUrl(Crawler $form)
+    {
+        $action = $form->form()->getUri();
+        return $this->getAbsoluteUrlFor($action);
+    }
+
+    /**
+     * Returns an array of name => value pairs for the passed form.
+     *
+     * For form fields containing a name ending in [], an array is
+     * created out of all field values with the given name.
+     *
+     * @param Form $form
+     * @return array an array of name => value pairs
+     */
+    protected function getFormValuesFor(Form $form)
+    {
+        $values = [];
+        $fields = $form->all();
+        foreach ($fields as $field) {
+            if ($field instanceof FileFormField || $field->isDisabled() || !$field->hasValue()) {
+                continue;
+            }
+            $fieldName = $this->getSubmissionFormFieldName($field->getName());
+            if (substr($field->getName(), -2) === '[]') {
+                if (!isset($values[$fieldName])) {
+                    $values[$fieldName] = [];
+                }
+                $values[$fieldName][] = $field->getValue();
+            } else {
+                $values[$fieldName] = $field->getValue();
+            }
+        }
+        return $values;
+    }
+
+    /**
+     * @param $requestParams
+     * @return array
+     */
+    protected function getFormPhpValues($requestParams)
+    {
+        foreach ($requestParams as $name => $value) {
+            $qs = http_build_query([$name => $value], '', '&');
+            if (!empty($qs)) {
+                // If the field's name is of the form of "array[key]",
+                // we'll remove it from the request parameters
+                // and set the "array" key instead which will contain the actual array.
+                if (strpos($name, '[') && strpos($name, ']') > strpos($name, '[')) {
+                    unset($requestParams[$name]);
+                }
+
+                parse_str($qs, $expandedValue);
+                $varName = substr($name, 0, strlen(key($expandedValue)));
+                $requestParams = array_replace_recursive($requestParams, [$varName => current($expandedValue)]);
+            }
+        }
+        return $requestParams;
+    }
+
+    /**
+     * Get the values of a set of input fields.
+     *
+     * @param Crawler $input
+     * @return array|string
+     */
+    protected function getInputValue($input)
+    {
+        $inputType = $input->attr('type');
+        if ($inputType === 'checkbox' || $inputType === 'radio') {
+            $values = [];
+
+            foreach ($input->filter(':checked') as $checkbox) {
+                $values[] = $checkbox->getAttribute('value');
+            }
+
+            return $values;
+        }
+
+        return (new InputFormField($input->getNode(0)))->getValue();
+    }
+
+    /**
+     * @return string
+     * @throws ModuleException
+     */
+    protected function getNormalizedResponseContent()
+    {
+        $content = $this->_getResponseContent();
+        // Since strip_tags has problems with JS code that contains
+        // an <= operator the script tags have to be removed manually first.
+        $content = preg_replace('#<script(.*?)>(.*?)</script>#is', '', $content);
+
+        $content = strip_tags($content);
+        $content = html_entity_decode($content, ENT_QUOTES);
+        $content = str_replace("\n", ' ', $content);
+        $content = preg_replace('/\s{2,}/', ' ', $content);
+
+        return $content;
+    }
+
+    /**
+     * @return int|string
+     * @throws ModuleException
+     */
+    protected function getResponseStatusCode()
+    {
+        // depending on Symfony version
+        $response = $this->getRunningClient()->getInternalResponse();
+        if (method_exists($response, 'getStatusCode')) {
+            return $response->getStatusCode();
+        }
+        if (method_exists($response, 'getStatus')) {
+            return $response->getStatus();
+        }
+        return "N/A";
+    }
+
+    /**
+     * Get the values of a set of fields and also the texts of selected options.
+     *
+     * @param Crawler $nodes
+     * @return array|mixed|string
+     */
+    protected function getValueAndTextFromField(Crawler $nodes)
+    {
+        if ($nodes->filter('textarea')->count()) {
+            return (new TextareaFormField($nodes->filter('textarea')->getNode(0)))->getValue();
+        }
+
+        $input = $nodes->filter('input');
+        if ($input->count()) {
+            return $this->getInputValue($input);
+        }
+
+        if ($nodes->filter('select')->count()) {
+            $options = $nodes->filter('option[selected]');
+            $values = [];
+
+            foreach ($options as $option) {
+                $values[] = $option->getAttribute('value');
+                $values[] = $option->textContent;
+                $values[] = trim($option->textContent);
+            }
+
+            return $values;
+        }
+
+        $this->fail("Element $nodes is not a form field or does not contain a form field");
+    }
+
+    /**
+     * Strips out one pair of trailing square brackets from a field's
+     * name.
+     *
+     * @param string $name the field name
+     * @return string the name after stripping trailing square brackets
+     */
+    protected function getSubmissionFormFieldName($name)
+    {
+        if (substr($name, -2) === '[]') {
+            return substr($name, 0, -2);
+        }
+        return $name;
+    }
+
+    protected function isInternalDomain($domain)
+    {
+        if ($this->internalDomains === null) {
+            $this->internalDomains = $this->getInternalDomains();
+        }
+
+        foreach ($this->internalDomains as $pattern) {
+            if (preg_match($pattern, $domain)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param $selector
+     *
+     * @return Crawler
+     * @throws ModuleException
+     */
+    protected function match($selector)
+    {
+        if (is_array($selector)) {
+            return $this->strictMatch($selector);
+        }
+
+        if (Locator::isCSS($selector)) {
+            return $this->getCrawler()->filter($selector);
+        }
+        if (Locator::isXPath($selector)) {
+            return $this->getCrawler()->filterXPath($selector);
+        }
+        throw new MalformedLocatorException($selector, 'XPath or CSS');
+    }
+
+    /**
+     * @param $name
+     * @param $form
+     * @param $dynamicField
+     * @return FormField
+     */
+    protected function matchFormField($name, $form, $dynamicField)
+    {
+        if (substr($name, -2) !== '[]') {
+            return $form[$name];
+        }
+        $name = substr($name, 0, -2);
+        /** @var $item FormField */
+        foreach ($form[$name] as $item) {
+            if ($item == $dynamicField) {
+                return $item;
+            }
+        }
+        throw new TestRuntimeException("None of form fields by {$name}[] were not matched");
+    }
+
+    protected function matchOption(Crawler $field, $option)
+    {
+        if (isset($option['value'])) {
+            return $option['value'];
+        }
+        if (isset($option['text'])) {
+            $option = $option['text'];
+        }
+        $options = $field->filterXPath(sprintf('//option[text()=normalize-space("%s")]|//input[@type="radio" and @value=normalize-space("%s")]', $option, $option));
+        if ($options->count()) {
+            $firstMatchingDomNode = $options->getNode(0);
+            if ($firstMatchingDomNode->tagName === 'option') {
+                $firstMatchingDomNode->setAttribute('selected', 'selected');
+            } else {
+                $firstMatchingDomNode->setAttribute('checked', 'checked');
+            }
+            $valueAttribute = $options->first()->attr('value');
+            //attr() returns null when option has no value attribute
+            if ($valueAttribute !== null) {
+                return $valueAttribute;
+            }
+            return $options->first()->text();
+        }
+        return $option;
+    }
+
+    /**
+     * @param $select
+     * @return object|Crawler
+     * @throws ModuleException
+     */
+    protected function matchSelectedOption($select)
+    {
+        $nodes = $this->getFieldsByLabelOrCss($select);
+        $selectedOptions = $nodes->filter('option[selected],input:checked');
+        if ($selectedOptions->count() === 0) {
+            $selectedOptions = $nodes->filter('option,input')->first();
+        }
+        return $selectedOptions;
+    }
+
+    /**
+     * @param $option
+     * @return ChoiceFormField
+     * @throws ModuleException
+     */
+    protected function proceedCheckOption($option)
+    {
+        $form = $this->getFormFor($field = $this->getFieldByLabelOrCss($option));
+        $name = $field->attr('name');
+
+        if ($field->getNode(0) === null) {
+            throw new TestRuntimeException("Form field $name is not located");
+        }
+        // If the name is an array than we compare objects to find right checkbox
+        $formField = $this->matchFormField($name, $form, new ChoiceFormField($field->getNode(0)));
+        $field->getNode(0)->setAttribute('checked', 'checked');
+        if (!$formField instanceof ChoiceFormField) {
+            throw new TestRuntimeException("Form field $name is not a checkable");
+        }
+        return $formField;
+    }
+
+    protected function proceedSeeInField(Crawler $fields, $value)
+    {
+        $testValues = $this->getValueAndTextFromField($fields);
+        if (!is_array($testValues)) {
+            $testValues = [$testValues];
+        }
+        if (is_bool($value) && $value === true && !empty($testValues)) {
+            $value = reset($testValues);
+        } elseif (empty($testValues)) {
+            $testValues = [''];
+        }
+        return [
+            'Contains',
+            (string)$value,
+            $testValues,
+            sprintf(
+                'Failed asserting that `%s` is in %s\'s value: %s',
+                $value,
+                $fields->getNode(0)->nodeName,
+                var_export($testValues, true)
+            )
+        ];
+    }
+
+    /**
+     * @param $formSelector
+     * @param array $params
+     * @param $assertNot
+     * @throws ModuleException
+     */
+    protected function proceedSeeInFormFields($formSelector, array $params, $assertNot)
+    {
+        $form = $this->match($formSelector)->first();
+        if ($form->count() === 0) {
+            throw new ElementNotFound($formSelector, 'Form');
+        }
+
+        $fields = [];
+        foreach ($params as $name => $values) {
+            $this->pushFormField($fields, $form, $name, $values);
+        }
+
+        foreach ($fields as list($field, $values)) {
+            if (!is_array($values)) {
+                $values = [$values];
+            }
+
+            foreach ($values as $value) {
+                $ret = $this->proceedSeeInField($field, $value);
+                if ($assertNot) {
+                    $this->assertNot($ret);
+                } else {
+                    $this->assert($ret);
+                }
+            }
+        }
+    }
+
+    /**
+     * Submits the form currently selected in the passed Crawler, after
+     * setting any values passed in $params and setting the value of the
+     * passed button name.
+     *
+     * @param Crawler $frmCrawl the form to submit
+     * @param array $params additional parameter values to set on the
+     *        form
+     * @param string $button the name of a submit button in the form
+     * @throws ExternalUrlException|ModuleException
+     */
+    protected function proceedSubmitForm(Crawler $frmCrawl, array $params, $button = null)
+    {
+        $url = null;
+        $form = $this->getFormFor($frmCrawl);
+        $defaults = $this->getFormValuesFor($form);
+        $merged = array_merge($defaults, $params);
+        $requestParams = $this->setCheckboxBoolValues($frmCrawl, $merged);
+
+        if (!empty($button)) {
+            $btnCrawl = $frmCrawl->filterXPath(sprintf(
+                '//*[not(@disabled) and @type="submit" and @name=%s]',
+                Crawler::xpathLiteral($button)
+            ));
+            if (count($btnCrawl)) {
+                $requestParams[$button] = $btnCrawl->attr('value');
+                $formaction = $btnCrawl->attr('formaction');
+                if ($formaction) {
+                    $url = $formaction;
+                }
+            }
+        }
+
+        if (!$url) {
+            $url = $this->getFormUrl($frmCrawl);
+        }
+
+        if (strcasecmp($form->getMethod(), 'GET') === 0) {
+            $url = Uri::mergeUrls($url, '?' . http_build_query($requestParams));
+        }
+
+        $url = preg_replace('/#.*/', '', $url);
+
+        $this->debugSection('Uri', $url);
+        $this->debugSection('Method', $form->getMethod());
+        $this->debugSection('Parameters', $requestParams);
+
+        $requestParams= $this->getFormPhpValues($requestParams);
+
+        $this->crawler = $this->clientRequest(
+            $form->getMethod(),
+            $url,
+            $requestParams,
+            $form->getPhpFiles()
+        );
+        $this->forms = [];
+    }
+
+    /**
+     * Map an array element passed to seeInFormFields to its corresponding field,
+     * recursing through array values if the field is not found.
+     *
+     * @param array $fields The previously found fields.
+     * @param Crawler $form The form in which to search for fields.
+     * @param string $name The field's name.
+     * @param mixed $values
+     * @return void
+     */
+    protected function pushFormField(&$fields, $form, $name, $values)
+    {
+        $field = $form->filterXPath(sprintf('.//*[@name=%s]', Crawler::xpathLiteral($name)));
+
+        if ($field->count()) {
+            $fields[] = [$field, $values];
+        } elseif (is_array($values)) {
+            foreach ($values as $key => $value) {
+                $this->pushFormField($fields, $form, "{$name}[$key]", $value);
+            }
+        } else {
+            throw new ElementNotFound(
+                sprintf('//*[@name=%s]', Crawler::xpathLiteral($name)),
+                'Form'
+            );
+        }
+    }
+
+    /**
+     * @param $result
+     * @param $maxRedirects
+     * @param $redirectCount
+     * @return mixed
+     * @throws ModuleException
+     */
+    protected function redirectIfNecessary($result, $maxRedirects, $redirectCount)
+    {
+        $locationHeader = $this->client->getInternalResponse()->getHeader('Location');
+        $statusCode = $this->getResponseStatusCode();
+        if ($locationHeader && $statusCode >= 300 && $statusCode < 400) {
+            if ($redirectCount === $maxRedirects) {
+                throw new LogicException(sprintf(
+                    'The maximum number (%d) of redirections was reached.',
+                    $maxRedirects
+                ));
+            }
+
+            $this->debugSection('Redirecting to', $locationHeader);
+
+            $result = $this->client->followRedirect();
+            $this->debugResponse($locationHeader);
+            return $this->redirectIfNecessary($result, $maxRedirects, $redirectCount + 1);
+        }
+        $this->client->followRedirects(true);
+        return $result;
+    }
+
+    /**
+     * Replaces boolean values in $params with the corresponding field's
+     * value for checkbox form fields.
+     *
+     * The function loops over all input checkbox fields, checking if a
+     * corresponding key is set in $params.  If it is, and the value is
+     * boolean or an array containing booleans, the value(s) are
+     * replaced in the array with the real value of the checkbox, and
+     * the array is returned.
+     *
+     * @param Crawler $form the form to find checkbox elements
+     * @param array $params the parameters to be submitted
+     * @return array the $params array after replacing bool values
+     */
+    protected function setCheckboxBoolValues(Crawler $form, array $params)
+    {
+        $checkboxes = $form->filter('input[type=checkbox]');
+        $chFoundByName = [];
+        foreach ($checkboxes as $box) {
+            $fieldName = $this->getSubmissionFormFieldName($box->getAttribute('name'));
+            $pos = (!isset($chFoundByName[$fieldName])) ? 0 : $chFoundByName[$fieldName];
+            $skip = !isset($params[$fieldName])
+                || (!is_array($params[$fieldName]) && !is_bool($params[$fieldName]))
+                || (is_array($params[$fieldName]) &&
+                    ($pos >= count($params[$fieldName]) || !is_bool($params[$fieldName][$pos]))
+                );
+
+            if ($skip) {
+                continue;
+            }
+            $values = $params[$fieldName];
+            if ($values === true) {
+                $params[$fieldName] = $box->hasAttribute('value') ? $box->getAttribute('value') : 'on';
+                $chFoundByName[$fieldName] = $pos + 1;
+            } elseif (is_array($values)) {
+                if ($values[$pos] === true) {
+                    $params[$fieldName][$pos] = $box->hasAttribute('value') ? $box->getAttribute('value') : 'on';
+                    $chFoundByName[$fieldName] = $pos + 1;
+                } else {
+                    array_splice($params[$fieldName], $pos, 1);
+                }
+            } else {
+                unset($params[$fieldName]);
+            }
+        }
+        return $params;
+    }
+
+    /**
+     * @param array $by
+     * @return Crawler
+     *@throws TestRuntimeException|ModuleException
+     */
+    protected function strictMatch(array $by)
+    {
+        $type = key($by);
+        $locator = $by[$type];
+        switch ($type) {
+            case 'id':
+                return $this->filterByCSS("#$locator");
+            case 'name':
+                return $this->filterByXPath(sprintf('.//*[@name=%s]', Crawler::xpathLiteral($locator)));
+            case 'css':
+                return $this->filterByCSS($locator);
+            case 'xpath':
+                return $this->filterByXPath($locator);
+            case 'link':
+                return $this->filterByXPath(sprintf('.//a[.=%s or contains(./@title, %s)]', Crawler::xpathLiteral($locator), Crawler::xpathLiteral($locator)));
+            case 'class':
+                return $this->filterByCSS(".$locator");
+            default:
+                throw new TestRuntimeException(
+                    "Locator type '$by' is not defined. Use either: xpath, css, id, link, class, name"
+                );
+        }
+    }
+
+    protected function setCookiesFromOptions()
+    {
+        if (isset($this->config['cookies']) && is_array($this->config['cookies']) && !empty($this->config['cookies'])) {
+            $domain = parse_url($this->config['url'], PHP_URL_HOST);
+            $cookieJar = $this->client->getCookieJar();
+            foreach ($this->config['cookies'] as &$cookie) {
+                if (!is_array($cookie) || !array_key_exists('Name', $cookie) || !array_key_exists('Value', $cookie)) {
+                    throw new InvalidArgumentException('Cookies must have at least Name and Value attributes');
+                }
+                if (!isset($cookie['Domain'])) {
+                    $cookie['Domain'] = $domain;
+                }
+                if (!isset($cookie['Expires'])) {
+                    $cookie['Expires'] = null;
+                }
+                if (!isset($cookie['Path'])) {
+                    $cookie['Path'] = '/';
+                }
+                if (!isset($cookie['Secure'])) {
+                    $cookie['Secure'] = false;
+                }
+                if (!isset($cookie['HttpOnly'])) {
+                    $cookie['HttpOnly'] = false;
+                }
+                $cookieJar->set(new Cookie(
+                    $cookie['Name'],
+                    $cookie['Value'],
+                    $cookie['Expires'],
+                    $cookie['Path'],
+                    $cookie['Domain'],
+                    $cookie['Secure'],
+                    $cookie['HttpOnly']
+                ));
+            }
+        }
+    }
+
     public function _failed(TestInterface $test, $fail)
     {
         try {
@@ -349,74 +1240,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     public function _getResponseContent()
     {
         return (string)$this->getRunningClient()->getInternalResponse()->getContent();
-    }
-
-    protected function clientRequest($method, $uri, array $parameters = [], array $files = [], array $server = [], $content = null, $changeHistory = true)
-    {
-        $this->debugSection("Request Headers", $this->headers);
-
-        foreach ($this->headers as $header => $val) { // moved from REST module
-
-            if ($val === null || $val === '') {
-                continue;
-            }
-
-            $header = str_replace('-', '_', strtoupper($header));
-            $server["HTTP_$header"] = $val;
-
-            // Issue #827 - symfony foundation requires 'CONTENT_TYPE' without HTTP_
-            if ($this instanceof Framework && $header === 'CONTENT_TYPE') {
-                $server[$header] = $val;
-            }
-        }
-        $server['REQUEST_TIME'] = time();
-        $server['REQUEST_TIME_FLOAT'] = microtime(true);
-        if ($this instanceof Framework) {
-            if (preg_match('#^(//|https?://(?!localhost))#', $uri)) {
-                $hostname = parse_url($uri, PHP_URL_HOST);
-                if (!$this->isInternalDomain($hostname)) {
-                    throw new ExternalUrlException(get_class($this) . " can't open external URL: " . $uri);
-                }
-            }
-
-            if ($method !== 'GET' && $content === null && !empty($parameters)) {
-                $content = http_build_query($parameters);
-            }
-        }
-
-        if (method_exists($this->client, 'isFollowingRedirects')) {
-            $isFollowingRedirects = $this->client->isFollowingRedirects();
-            $maxRedirects = $this->client->getMaxRedirects();
-        } else {
-            //Symfony 2.7 support
-            $isFollowingRedirects = ReflectionHelper::readPrivateProperty($this->client, 'followRedirects', 'Symfony\Component\BrowserKit\Client');
-            $maxRedirects = ReflectionHelper::readPrivateProperty($this->client, 'maxRedirects', 'Symfony\Component\BrowserKit\Client');
-        }
-
-        if (!$isFollowingRedirects) {
-            $result = $this->client->request($method, $uri, $parameters, $files, $server, $content, $changeHistory);
-            $this->debugResponse($uri);
-            return $result;
-        }
-
-        $this->client->followRedirects(false);
-        $result = $this->client->request($method, $uri, $parameters, $files, $server, $content, $changeHistory);
-        $this->debugResponse($uri);
-        return $this->redirectIfNecessary($result, $maxRedirects, 0);
-    }
-
-    protected function isInternalDomain($domain)
-    {
-        if ($this->internalDomains === null) {
-            $this->internalDomains = $this->getInternalDomains();
-        }
-
-        foreach ($this->internalDomains as $pattern) {
-            if (preg_match($pattern, $domain)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -563,32 +1386,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             $this->clickByLocator($link);
         } catch (MalformedLocatorException $e) {
             throw new ElementNotFound("name=$link", "'$link' is invalid CSS and XPath selector and Link or Button");
-        }
-    }
-
-    /**
-     * @param $link
-     * @return bool
-     */
-    protected function clickByLocator($link)
-    {
-        $nodes = $this->match($link);
-        if (!$nodes->count()) {
-            throw new ElementNotFound($link, 'Link or Button by name or CSS or XPath');
-        }
-
-        foreach ($nodes as $node) {
-            $tag = $node->tagName;
-            $type = $node->getAttribute('type');
-
-            if ($tag === 'a') {
-                $this->openHrefFromDomNode($node);
-                return true;
-            }
-
-            if (in_array($tag, ['input', 'button']) && in_array($type, ['submit', 'image'])) {
-                return $this->clickButton($node);
-            }
         }
     }
 
@@ -743,261 +1540,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->proceedSeeInFormFields($formSelector, $params, true);
     }
 
-    protected function proceedSeeInFormFields($formSelector, array $params, $assertNot)
-    {
-        $form = $this->match($formSelector)->first();
-        if ($form->count() === 0) {
-            throw new ElementNotFound($formSelector, 'Form');
-        }
-
-        $fields = [];
-        foreach ($params as $name => $values) {
-            $this->pushFormField($fields, $form, $name, $values);
-        }
-
-        foreach ($fields as list($field, $values)) {
-            if (!is_array($values)) {
-                $values = [$values];
-            }
-
-            foreach ($values as $value) {
-                $ret = $this->proceedSeeInField($field, $value);
-                if ($assertNot) {
-                    $this->assertNot($ret);
-                } else {
-                    $this->assert($ret);
-                }
-            }
-        }
-    }
-
-    /**
-     * Map an array element passed to seeInFormFields to its corresponding field,
-     * recursing through array values if the field is not found.
-     *
-     * @param array $fields The previously found fields.
-     * @param Crawler $form The form in which to search for fields.
-     * @param string $name The field's name.
-     * @param mixed $values
-     * @return void
-     */
-    protected function pushFormField(&$fields, $form, $name, $values)
-    {
-        $field = $form->filterXPath(sprintf('.//*[@name=%s]', Crawler::xpathLiteral($name)));
-
-        if ($field->count()) {
-            $fields[] = [$field, $values];
-        } elseif (is_array($values)) {
-            foreach ($values as $key => $value) {
-                $this->pushFormField($fields, $form, "{$name}[$key]", $value);
-            }
-        } else {
-            throw new ElementNotFound(
-                sprintf('//*[@name=%s]', Crawler::xpathLiteral($name)),
-                'Form'
-            );
-        }
-    }
-
-    protected function proceedSeeInField(Crawler $fields, $value)
-    {
-        $testValues = $this->getValueAndTextFromField($fields);
-        if (!is_array($testValues)) {
-            $testValues = [$testValues];
-        }
-        if (is_bool($value) && $value === true && !empty($testValues)) {
-            $value = reset($testValues);
-        } elseif (empty($testValues)) {
-            $testValues = [''];
-        }
-        return [
-            'Contains',
-            (string)$value,
-            $testValues,
-            sprintf(
-                'Failed asserting that `%s` is in %s\'s value: %s',
-                $value,
-                $fields->getNode(0)->nodeName,
-                var_export($testValues, true)
-            )
-        ];
-    }
-
-    /**
-     * Get the values of a set of fields and also the texts of selected options.
-     *
-     * @param Crawler $nodes
-     * @return array|mixed|string
-     */
-    protected function getValueAndTextFromField(Crawler $nodes)
-    {
-        if ($nodes->filter('textarea')->count()) {
-            return (new TextareaFormField($nodes->filter('textarea')->getNode(0)))->getValue();
-        }
-
-        $input = $nodes->filter('input');
-        if ($input->count()) {
-            return $this->getInputValue($input);
-        }
-
-        if ($nodes->filter('select')->count()) {
-            $options = $nodes->filter('option[selected]');
-            $values = [];
-
-            foreach ($options as $option) {
-                $values[] = $option->getAttribute('value');
-                $values[] = $option->textContent;
-                $values[] = trim($option->textContent);
-            }
-
-            return $values;
-        }
-
-        $this->fail("Element $nodes is not a form field or does not contain a form field");
-    }
-
-    /**
-     * Get the values of a set of input fields.
-     *
-     * @param Crawler $input
-     * @return array|string
-     */
-    protected function getInputValue($input)
-    {
-        $inputType = $input->attr('type');
-        if ($inputType === 'checkbox' || $inputType === 'radio') {
-            $values = [];
-
-            foreach ($input->filter(':checked') as $checkbox) {
-                $values[] = $checkbox->getAttribute('value');
-            }
-
-            return $values;
-        }
-
-        return (new InputFormField($input->getNode(0)))->getValue();
-    }
-
-    /**
-     * Strips out one pair of trailing square brackets from a field's
-     * name.
-     *
-     * @param string $name the field name
-     * @return string the name after stripping trailing square brackets
-     */
-    protected function getSubmissionFormFieldName($name)
-    {
-        if (substr($name, -2) === '[]') {
-            return substr($name, 0, -2);
-        }
-        return $name;
-    }
-
-    /**
-     * Replaces boolean values in $params with the corresponding field's
-     * value for checkbox form fields.
-     *
-     * The function loops over all input checkbox fields, checking if a
-     * corresponding key is set in $params.  If it is, and the value is
-     * boolean or an array containing booleans, the value(s) are
-     * replaced in the array with the real value of the checkbox, and
-     * the array is returned.
-     *
-     * @param Crawler $form the form to find checkbox elements
-     * @param array $params the parameters to be submitted
-     * @return array the $params array after replacing bool values
-     */
-    protected function setCheckboxBoolValues(Crawler $form, array $params)
-    {
-        $checkboxes = $form->filter('input[type=checkbox]');
-        $chFoundByName = [];
-        foreach ($checkboxes as $box) {
-            $fieldName = $this->getSubmissionFormFieldName($box->getAttribute('name'));
-            $pos = (!isset($chFoundByName[$fieldName])) ? 0 : $chFoundByName[$fieldName];
-            $skip = !isset($params[$fieldName])
-                || (!is_array($params[$fieldName]) && !is_bool($params[$fieldName]))
-                || (is_array($params[$fieldName]) &&
-                    ($pos >= count($params[$fieldName]) || !is_bool($params[$fieldName][$pos]))
-                );
-
-            if ($skip) {
-                continue;
-            }
-            $values = $params[$fieldName];
-            if ($values === true) {
-                $params[$fieldName] = $box->hasAttribute('value') ? $box->getAttribute('value') : 'on';
-                $chFoundByName[$fieldName] = $pos + 1;
-            } elseif (is_array($values)) {
-                if ($values[$pos] === true) {
-                    $params[$fieldName][$pos] = $box->hasAttribute('value') ? $box->getAttribute('value') : 'on';
-                    $chFoundByName[$fieldName] = $pos + 1;
-                } else {
-                    array_splice($params[$fieldName], $pos, 1);
-                }
-            } else {
-                unset($params[$fieldName]);
-            }
-        }
-        return $params;
-    }
-
-    /**
-     * Submits the form currently selected in the passed Crawler, after
-     * setting any values passed in $params and setting the value of the
-     * passed button name.
-     *
-     * @param Crawler $frmCrawl the form to submit
-     * @param array $params additional parameter values to set on the
-     *        form
-     * @param string $button the name of a submit button in the form
-     */
-    protected function proceedSubmitForm(Crawler $frmCrawl, array $params, $button = null)
-    {
-        $url = null;
-        $form = $this->getFormFor($frmCrawl);
-        $defaults = $this->getFormValuesFor($form);
-        $merged = array_merge($defaults, $params);
-        $requestParams = $this->setCheckboxBoolValues($frmCrawl, $merged);
-
-        if (!empty($button)) {
-            $btnCrawl = $frmCrawl->filterXPath(sprintf(
-                '//*[not(@disabled) and @type="submit" and @name=%s]',
-                Crawler::xpathLiteral($button)
-            ));
-            if (count($btnCrawl)) {
-                $requestParams[$button] = $btnCrawl->attr('value');
-                $formaction = $btnCrawl->attr('formaction');
-                if ($formaction) {
-                    $url = $formaction;
-                }
-            }
-        }
-
-        if (!$url) {
-            $url = $this->getFormUrl($frmCrawl);
-        }
-
-        if (strcasecmp($form->getMethod(), 'GET') === 0) {
-            $url = Uri::mergeUrls($url, '?' . http_build_query($requestParams));
-        }
-
-        $url = preg_replace('/#.*/', '', $url);
-
-        $this->debugSection('Uri', $url);
-        $this->debugSection('Method', $form->getMethod());
-        $this->debugSection('Parameters', $requestParams);
-
-        $requestParams= $this->getFormPhpValues($requestParams);
-
-        $this->crawler = $this->clientRequest(
-            $form->getMethod(),
-            $url,
-            $requestParams,
-            $form->getPhpFiles()
-        );
-        $this->forms = [];
-    }
-
     public function submitForm($selector, array $params, $button = null)
     {
         $form = $this->match($selector)->first();
@@ -1005,93 +1547,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             throw new ElementNotFound($this->stringifySelector($selector), 'Form');
         }
         $this->proceedSubmitForm($form, $params, $button);
-    }
-
-    /**
-     * Returns an absolute URL for the passed URI with the current URL
-     * as the base path.
-     *
-     * @param string $uri the absolute or relative URI
-     * @return string the absolute URL
-     * @throws \Codeception\Exception\TestRuntimeException if either the current
-     *         URL or the passed URI can't be parsed
-     */
-    protected function getAbsoluteUrlFor($uri)
-    {
-        $currentUrl = $this->getRunningClient()->getHistory()->current()->getUri();
-        if (empty($uri) || strpos($uri, '#') === 0) {
-            return $currentUrl;
-        }
-        return Uri::mergeUrls($currentUrl, $uri);
-    }
-
-    /**
-     * Returns the form action's absolute URL.
-     *
-     * @param \Symfony\Component\DomCrawler\Crawler $form
-     * @return string
-     * @throws \Codeception\Exception\TestRuntimeException if either the current
-     *         URL or the URI of the form's action can't be parsed
-     */
-    protected function getFormUrl(Crawler $form)
-    {
-        $action = $form->form()->getUri();
-        return $this->getAbsoluteUrlFor($action);
-    }
-
-    /**
-     * Returns the DomCrawler\Form object for the form pointed to by
-     * $node or its closes form parent.
-     *
-     * @param \Symfony\Component\DomCrawler\Crawler $node
-     * @return \Symfony\Component\DomCrawler\Form
-     */
-    protected function getFormFor(Crawler $node)
-    {
-        if (strcasecmp($node->first()->getNode(0)->tagName, 'form') === 0) {
-            $form = $node->first();
-        } else {
-            $form = $node->parents()->filter('form')->first();
-        }
-        if (!$form) {
-            $this->fail('The selected node is not a form and does not have a form ancestor.');
-        }
-
-        $identifier = $form->attr('id') ?: $form->attr('action');
-        if (!isset($this->forms[$identifier])) {
-            $this->forms[$identifier] = $this->getFormFromCrawler($form);
-        }
-        return $this->forms[$identifier];
-    }
-
-    /**
-     * Returns an array of name => value pairs for the passed form.
-     *
-     * For form fields containing a name ending in [], an array is
-     * created out of all field values with the given name.
-     *
-     * @param \Symfony\Component\DomCrawler\Form the form
-     * @return array an array of name => value pairs
-     */
-    protected function getFormValuesFor(Form $form)
-    {
-        $values = [];
-        $fields = $form->all();
-        foreach ($fields as $field) {
-            if ($field instanceof FileFormField || $field->isDisabled() || !$field->hasValue()) {
-                continue;
-            }
-            $fieldName = $this->getSubmissionFormFieldName($field->getName());
-            if (substr($field->getName(), -2) === '[]') {
-                if (!isset($values[$fieldName])) {
-                    $values[$fieldName] = [];
-                }
-                $values[$fieldName][] = $field->getValue();
-            } else {
-                $values[$fieldName] = $field->getValue();
-            }
-        }
-        return $values;
     }
 
     public function fillField($field, $value)
@@ -1109,55 +1564,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         if ($input->getNode(0)->tagName === 'textarea') {
             $input->getNode(0)->nodeValue = htmlspecialchars($value);
         }
-    }
-
-    /**
-     * @param $field
-     *
-     * @return \Symfony\Component\DomCrawler\Crawler
-     */
-    protected function getFieldsByLabelOrCss($field)
-    {
-        if (is_array($field)) {
-            $input = $this->strictMatch($field);
-            if (!count($input)) {
-                throw new ElementNotFound($field);
-            }
-            return $input;
-        }
-
-        // by label
-        $label = $this->strictMatch(['xpath' => sprintf('.//label[descendant-or-self::node()[text()[normalize-space()=%s]]]', Crawler::xpathLiteral($field))]);
-        if (count($label)) {
-            $label = $label->first();
-            if ($label->attr('for')) {
-                $input = $this->strictMatch(['id' => $label->attr('for')]);
-            } else {
-                $input = $this->strictMatch(['xpath' => sprintf('.//label[descendant-or-self::node()[text()[normalize-space()=%s]]]//input', Crawler::xpathLiteral($field))]);
-            }
-        }
-
-        // by name
-        if (!isset($input)) {
-            $input = $this->strictMatch(['name' => $field]);
-        }
-
-        // by CSS and XPath
-        if (!count($input)) {
-            $input = $this->match($field);
-        }
-
-        if (!count($input)) {
-            throw new ElementNotFound($field, 'Form field by Label or CSS');
-        }
-
-        return $input;
-    }
-
-    protected function getFieldByLabelOrCss($field)
-    {
-        $input = $this->getFieldsByLabelOrCss($field);
-        return $input->first();
     }
 
     public function selectOption($select, $option)
@@ -1200,32 +1606,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $formField->select($this->matchOption($field, $option));
     }
 
-    protected function matchOption(Crawler $field, $option)
-    {
-        if (isset($option['value'])) {
-            return $option['value'];
-        }
-        if (isset($option['text'])) {
-            $option = $option['text'];
-        }
-        $options = $field->filterXPath(sprintf('//option[text()=normalize-space("%s")]|//input[@type="radio" and @value=normalize-space("%s")]', $option, $option));
-        if ($options->count()) {
-            $firstMatchingDomNode = $options->getNode(0);
-            if ($firstMatchingDomNode->tagName === 'option') {
-                $firstMatchingDomNode->setAttribute('selected', 'selected');
-            } else {
-                $firstMatchingDomNode->setAttribute('checked', 'checked');
-            }
-            $valueAttribute = $options->first()->attr('value');
-            //attr() returns null when option has no value attribute
-            if ($valueAttribute !== null) {
-                return $valueAttribute;
-            }
-            return $options->first()->text();
-        }
-        return $option;
-    }
-
     public function checkOption($option)
     {
         $this->proceedCheckOption($option)->tick();
@@ -1236,36 +1616,15 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->proceedCheckOption($option)->untick();
     }
 
-    /**
-     * @param $option
-     * @return ChoiceFormField
-     */
-    protected function proceedCheckOption($option)
-    {
-        $form = $this->getFormFor($field = $this->getFieldByLabelOrCss($option));
-        $name = $field->attr('name');
-
-        if ($field->getNode(0) === null) {
-            throw new TestRuntimeException("Form field $name is not located");
-        }
-        // If the name is an array than we compare objects to find right checkbox
-        $formField = $this->matchFormField($name, $form, new ChoiceFormField($field->getNode(0)));
-        $field->getNode(0)->setAttribute('checked', 'checked');
-        if (!$formField instanceof ChoiceFormField) {
-            throw new TestRuntimeException("Form field $name is not a checkable");
-        }
-        return $formField;
-    }
-
     public function attachFile($field, $filename)
     {
         $form = $this->getFormFor($field = $this->getFieldByLabelOrCss($field));
         $filePath = codecept_data_dir() . $filename;
         if (!file_exists($filePath)) {
-            throw new \InvalidArgumentException("File does not exist: $filePath");
+            throw new InvalidArgumentException("File does not exist: $filePath");
         }
         if (!is_readable($filePath)) {
-            throw new \InvalidArgumentException("File is not readable: $filePath");
+            throw new InvalidArgumentException("File is not readable: $filePath");
         }
 
         $name = $field->attr('name');
@@ -1335,17 +1694,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->clientRequest($method, $uri, $params, [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'], null, false);
     }
 
-    /**
-     * @param $url
-     */
-    protected function debugResponse($url)
-    {
-        $this->debugSection('Page', $url);
-        $this->debugSection('Response', $this->getResponseStatusCode());
-        $this->debugSection('Request Cookies', $this->getRunningClient()->getInternalRequest()->getCookies());
-        $this->debugSection('Response Headers', $this->getRunningClient()->getInternalResponse()->getHeaders());
-    }
-
     public function makeHtmlSnapshot($name = null)
     {
         if (empty($name)) {
@@ -1364,80 +1712,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     public function _getResponseStatusCode()
     {
         return $this->getResponseStatusCode();
-    }
-
-    protected function getResponseStatusCode()
-    {
-        // depending on Symfony version
-        $response = $this->getRunningClient()->getInternalResponse();
-        if (method_exists($response, 'getStatusCode')) {
-            return $response->getStatusCode();
-        }
-        if (method_exists($response, 'getStatus')) {
-            return $response->getStatus();
-        }
-        return "N/A";
-    }
-
-    /**
-     * @param $selector
-     *
-     * @return Crawler
-     */
-    protected function match($selector)
-    {
-        if (is_array($selector)) {
-            return $this->strictMatch($selector);
-        }
-
-        if (Locator::isCSS($selector)) {
-            return $this->getCrawler()->filter($selector);
-        }
-        if (Locator::isXPath($selector)) {
-            return $this->getCrawler()->filterXPath($selector);
-        }
-        throw new MalformedLocatorException($selector, 'XPath or CSS');
-    }
-
-    /**
-     * @param array $by
-     * @throws TestRuntimeException
-     * @return Crawler
-     */
-    protected function strictMatch(array $by)
-    {
-        $type = key($by);
-        $locator = $by[$type];
-        switch ($type) {
-            case 'id':
-                return $this->filterByCSS("#$locator");
-            case 'name':
-                return $this->filterByXPath(sprintf('.//*[@name=%s]', Crawler::xpathLiteral($locator)));
-            case 'css':
-                return $this->filterByCSS($locator);
-            case 'xpath':
-                return $this->filterByXPath($locator);
-            case 'link':
-                return $this->filterByXPath(sprintf('.//a[.=%s or contains(./@title, %s)]', Crawler::xpathLiteral($locator), Crawler::xpathLiteral($locator)));
-            case 'class':
-                return $this->filterByCSS(".$locator");
-            default:
-                throw new TestRuntimeException(
-                    "Locator type '$by' is not defined. Use either: xpath, css, id, link, class, name"
-                );
-        }
-    }
-
-    protected function filterByAttributes(Crawler $nodes, array $attributes)
-    {
-        foreach ($attributes as $attr => $val) {
-            $nodes = $nodes->reduce(
-                static function (Crawler $node) use ($attr, $val) {
-                    return $node->attr($attr) === $val;
-                }
-            );
-        }
-        return $nodes;
     }
 
     public function grabTextFrom($cssOrXPathOrRegex)
@@ -1644,16 +1918,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertNotEquals($optionText, $value);
     }
 
-    protected function matchSelectedOption($select)
-    {
-        $nodes = $this->getFieldsByLabelOrCss($select);
-        $selectedOptions = $nodes->filter('option[selected],input:checked');
-        if ($selectedOptions->count() === 0) {
-            $selectedOptions = $nodes->filter('option,input')->first();
-        }
-        return $selectedOptions;
-    }
-
     /**
      * Asserts that current page has 404 response status code.
      */
@@ -1775,155 +2039,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertStringNotContainsString($title, $nodes->first()->text(), "page title contains $title");
     }
 
-    protected function assertDomContains($nodes, $message, $text = '')
-    {
-        $constraint = new CrawlerConstraint($text, $this->_getCurrentUri());
-        $this->assertThat($nodes, $constraint, $message);
-    }
-
-    protected function assertDomNotContains($nodes, $message, $text = '')
-    {
-        $constraint = new CrawlerNotConstraint($text, $this->_getCurrentUri());
-        $this->assertThat($nodes, $constraint, $message);
-    }
-
-    protected function assertPageContains($needle, $message = '')
-    {
-        $constraint = new PageConstraint($needle, $this->_getCurrentUri());
-        $this->assertThat(
-            $this->getNormalizedResponseContent(),
-            $constraint,
-            $message
-        );
-    }
-
-    protected function assertPageNotContains($needle, $message = '')
-    {
-        $constraint = new PageConstraint($needle, $this->_getCurrentUri());
-        $this->assertThatItsNot(
-            $this->getNormalizedResponseContent(),
-            $constraint,
-            $message
-        );
-    }
-
-    protected function assertPageSourceContains($needle, $message = '')
-    {
-        $constraint = new PageConstraint($needle, $this->_getCurrentUri());
-        $this->assertThat(
-            $this->_getResponseContent(),
-            $constraint,
-            $message
-        );
-    }
-
-    protected function assertPageSourceNotContains($needle, $message = '')
-    {
-        $constraint = new PageConstraint($needle, $this->_getCurrentUri());
-        $this->assertThatItsNot(
-            $this->_getResponseContent(),
-            $constraint,
-            $message
-        );
-    }
-
-    /**
-     * @param $name
-     * @param $form
-     * @param $dynamicField
-     * @return FormField
-     */
-    protected function matchFormField($name, $form, $dynamicField)
-    {
-        if (substr($name, -2) !== '[]') {
-            return $form[$name];
-        }
-        $name = substr($name, 0, -2);
-        /** @var $item \Symfony\Component\DomCrawler\Field\FormField */
-        foreach ($form[$name] as $item) {
-            if ($item == $dynamicField) {
-                return $item;
-            }
-        }
-        throw new TestRuntimeException("None of form fields by {$name}[] were not matched");
-    }
-
-    /**
-     * @param $locator
-     * @return Crawler
-     */
-    protected function filterByCSS($locator)
-    {
-        if (!Locator::isCSS($locator)) {
-            throw new MalformedLocatorException($locator, 'css');
-        }
-        return $this->getCrawler()->filter($locator);
-    }
-
-    /**
-     * @param $locator
-     * @return Crawler
-     */
-    protected function filterByXPath($locator)
-    {
-        if (!Locator::isXPath($locator)) {
-            throw new MalformedLocatorException($locator, 'xpath');
-        }
-        return $this->getCrawler()->filterXPath($locator);
-    }
-
-    /**
-     * @param $requestParams
-     * @return array
-     */
-    protected function getFormPhpValues($requestParams)
-    {
-        foreach ($requestParams as $name => $value) {
-            $qs = http_build_query([$name => $value], '', '&');
-            if (!empty($qs)) {
-                // If the field's name is of the form of "array[key]",
-                // we'll remove it from the request parameters
-                // and set the "array" key instead which will contain the actual array.
-                if (strpos($name, '[') && strpos($name, ']') > strpos($name, '[')) {
-                    unset($requestParams[$name]);
-                }
-
-                parse_str($qs, $expandedValue);
-                $varName = substr($name, 0, strlen(key($expandedValue)));
-                $requestParams = array_replace_recursive($requestParams, [$varName => current($expandedValue)]);
-            }
-        }
-        return $requestParams;
-    }
-
-    /**
-     * @param $result
-     * @param $maxRedirects
-     * @param $redirectCount
-     * @return mixed
-     */
-    protected function redirectIfNecessary($result, $maxRedirects, $redirectCount)
-    {
-        $locationHeader = $this->client->getInternalResponse()->getHeader('Location');
-        $statusCode = $this->getResponseStatusCode();
-        if ($locationHeader && $statusCode >= 300 && $statusCode < 400) {
-            if ($redirectCount === $maxRedirects) {
-                throw new \LogicException(sprintf(
-                    'The maximum number (%d) of redirections was reached.',
-                    $maxRedirects
-                ));
-            }
-
-            $this->debugSection('Redirecting to', $locationHeader);
-
-            $result = $this->client->followRedirect();
-            $this->debugResponse($locationHeader);
-            return $this->redirectIfNecessary($result, $maxRedirects, $redirectCount + 1);
-        }
-        $this->client->followRedirects(true);
-        return $result;
-    }
-
     /**
      * Switch to iframe or frame on the page.
      *
@@ -1963,15 +2078,15 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     public function moveBack($numberOfSteps = 1)
     {
         if (!is_int($numberOfSteps) || $numberOfSteps < 1) {
-            throw new \InvalidArgumentException('numberOfSteps must be positive integer');
+            throw new InvalidArgumentException('numberOfSteps must be positive integer');
         }
         try {
             $history = $this->getRunningClient()->getHistory();
             for ($i = $numberOfSteps; $i > 0; $i--) {
                 $request = $history->back();
             }
-        } catch (\LogicException $e) {
-            throw new \InvalidArgumentException(
+        } catch (LogicException $e) {
+            throw new InvalidArgumentException(
                 sprintf(
                     'numberOfSteps is set to %d, but there are only %d previous steps in the history',
                     $numberOfSteps,
@@ -1987,68 +2102,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             $request->getServer(),
             $request->getContent()
         );
-    }
-
-    protected function debugCookieJar()
-    {
-        $cookies = $this->client->getCookieJar()->all();
-        $cookieStrings = array_map('strval', $cookies);
-        $this->debugSection('Cookie Jar', $cookieStrings);
-    }
-
-    protected function setCookiesFromOptions()
-    {
-        if (isset($this->config['cookies']) && is_array($this->config['cookies']) && !empty($this->config['cookies'])) {
-            $domain = parse_url($this->config['url'], PHP_URL_HOST);
-            $cookieJar = $this->client->getCookieJar();
-            foreach ($this->config['cookies'] as &$cookie) {
-                if (!is_array($cookie) || !array_key_exists('Name', $cookie) || !array_key_exists('Value', $cookie)) {
-                    throw new \InvalidArgumentException('Cookies must have at least Name and Value attributes');
-                }
-                if (!isset($cookie['Domain'])) {
-                    $cookie['Domain'] = $domain;
-                }
-                if (!isset($cookie['Expires'])) {
-                    $cookie['Expires'] = null;
-                }
-                if (!isset($cookie['Path'])) {
-                    $cookie['Path'] = '/';
-                }
-                if (!isset($cookie['Secure'])) {
-                    $cookie['Secure'] = false;
-                }
-                if (!isset($cookie['HttpOnly'])) {
-                    $cookie['HttpOnly'] = false;
-                }
-                $cookieJar->set(new \Symfony\Component\BrowserKit\Cookie(
-                    $cookie['Name'],
-                    $cookie['Value'],
-                    $cookie['Expires'],
-                    $cookie['Path'],
-                    $cookie['Domain'],
-                    $cookie['Secure'],
-                    $cookie['HttpOnly']
-                ));
-            }
-        }
-    }
-
-    /**
-     * @return string
-     */
-    protected function getNormalizedResponseContent()
-    {
-        $content = $this->_getResponseContent();
-        // Since strip_tags has problems with JS code that contains
-        // an <= operator the script tags have to be removed manually first.
-        $content = preg_replace('#<script(.*?)>(.*?)</script>#is', '', $content);
-
-        $content = strip_tags($content);
-        $content = html_entity_decode($content, ENT_QUOTES);
-        $content = str_replace("\n", ' ', $content);
-        $content = preg_replace('/\s{2,}/', ' ', $content);
-
-        return $content;
     }
 
     /**
