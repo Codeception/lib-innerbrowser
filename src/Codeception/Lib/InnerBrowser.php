@@ -7,10 +7,7 @@ use Codeception\Exception\ExternalUrlException;
 use Codeception\Exception\MalformedLocatorException;
 use Codeception\Exception\ModuleException;
 use Codeception\Exception\TestRuntimeException;
-use Codeception\Lib\Interfaces\ConflictsWithModule;
-use Codeception\Lib\Interfaces\ElementLocator;
-use Codeception\Lib\Interfaces\PageSourceSaver;
-use Codeception\Lib\Interfaces\Web;
+use Codeception\Lib\Model\BrowserInterface;
 use Codeception\Lib\Model\ConflictsWithModuleTrait;
 use Codeception\Lib\Model\ElementLocatorTrait;
 use Codeception\Lib\Model\PageSourceSaverTrait;
@@ -46,7 +43,7 @@ if (!class_exists('Symfony\Component\BrowserKit\AbstractBrowser') && class_exist
     class_alias('Symfony\Component\BrowserKit\Client', 'Symfony\Component\BrowserKit\AbstractBrowser');
 }
 
-class InnerBrowser extends Module implements ConflictsWithModule, ElementLocator, PageSourceSaver, Web
+class InnerBrowser extends Module implements BrowserInterface
 {
     use
         ConflictsWithModuleTrait,
