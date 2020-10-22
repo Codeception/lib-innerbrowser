@@ -8,6 +8,10 @@ php:
   - 7.2
   - 7.3
   - 7.4
+  - 8.0
+matrix:
+  allow_failures:
+    - php: 8.0
 
 install:
   - '[[ -z "$CI_USER_TOKEN" ]] || composer config github-oauth.github.com ${CI_USER_TOKEN};'
