@@ -1003,6 +1003,18 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     {
         $fakeDom = new \DOMDocument();
         $fakeDom->appendChild($fakeDom->importNode($form->getNode(0), true));
+
+        //add fields having form attribute with id of this form
+        $formId = $form->attr('id');
+        if ($formId !== null) {
+            $fakeForm = $fakeDom->firstChild;
+            $topParent = $form->parents()->last();
+            $fieldsByFormAttribute = $topParent->filter("input[form=$formId],select[form=$formId],textarea[form=$formId]");
+            foreach ($fieldsByFormAttribute as $field) {
+                $fakeForm->appendChild($fakeDom->importNode($field, true));
+            }
+        }
+
         $node = $fakeDom->documentElement;
         $action = (string)$this->getFormUrl($form);
         $cloned = new Crawler($node, $action, $this->getBaseUrl());
