@@ -1684,6 +1684,17 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->click('Invalid form');
     }
 
+    /**
+     * https://github.com/Codeception/Codeception/issues/6022
+     */
+    public function testFillFieldNotInForm()
+    {
+        $this->module->amOnPage('/form/input-not-in-form');
+        $this->module->seeElement("form",["id" => "form1"]);
+        $this->module->seeElement("input",["name" => "username"]);
+        $this->module->fillField("username","usr-code");
+    }
+
     public function testSubmitHashForm()
     {
         $this->module->amOnPage('/form/anchor');
