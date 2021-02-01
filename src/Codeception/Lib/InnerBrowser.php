@@ -1430,7 +1430,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     public function grabTextFrom($cssOrXPathOrRegex)
     {
-        if (@preg_match($cssOrXPathOrRegex, $this->client->getInternalResponse()->getContent(), $matches)) {
+        if (is_string($cssOrXPathOrRegex) && @preg_match($cssOrXPathOrRegex, $this->client->getInternalResponse()->getContent(), $matches)) {
             return $matches[1];
         }
         $nodes = $this->match($cssOrXPathOrRegex);
