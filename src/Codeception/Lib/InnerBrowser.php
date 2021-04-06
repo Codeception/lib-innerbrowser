@@ -209,7 +209,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                 }
             }
 
-            if (!in_array($method, ['GET', 'HEAD'], true) && $content === null && !empty($parameters)) {
+            if (!in_array($method, ['GET', 'HEAD', 'DELETE', 'OPTIONS'], true) && $content === null && !empty($parameters)) {
                 $content = http_build_query($parameters);
             }
         }
