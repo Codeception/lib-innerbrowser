@@ -1963,7 +1963,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
         try {
             $history = $this->getRunningClient()->getHistory();
-            for ($i = $numberOfSteps; $i > 0; $i--) {
+            for ($i = 0; $i < $numberOfSteps; $i++) {
                 $request = $history->back();
             }
         } catch (\LogicException $e) {
@@ -2130,5 +2130,57 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     public function setMaxRedirects($maxRedirects)
     {
         $this->client->setMaxRedirects($maxRedirects);
+    }
+
+    /**
+     * Goes forward in the browser history.
+     *
+     * @param int $numberOfSteps (default value 1)
+     */
+    public function moveForward($numberOfSteps = 1)
+    {
+        if (!is_int($numberOfSteps) || $numberOfSteps < 1) {
+            throw new \InvalidArgumentException('numberOfSteps must be positive integer');
+        }
+        try {
+            $history = $this->getRunningClient()->getHistory();
+            for ($i = 0; $i < $numberOfSteps; $i++) {
+                $request = $history->forward();
+            }
+        } catch (\LogicException $e) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'numberOfSteps is set to %d, but there are only %d steps forward in history',
+                    $numberOfSteps,
+                    $numberOfSteps - $i
+                )
+            );
+        }
+        $this->_loadPage(
+            $request->getMethod(),
+            $request->getUri(),
+            $request->getParameters(),
+            $request->getFiles(),
+            $request->getServer(),
+            $request->getContent()
+        );
+    }
+
+    /**
+     * Reloads the current browser.
+     */
+    public function reloadPage()
+    {
+        $this->client->reload();
+    }
+
+    /**
+     * Restarts the client.
+     *
+     * It flushes history and all cookies.
+     */
+    public function restartBrowser()
+    {
+        $this->client->restart();
     }
 }
