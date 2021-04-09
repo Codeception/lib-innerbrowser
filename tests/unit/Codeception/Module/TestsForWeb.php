@@ -1780,4 +1780,13 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $server = $this->module->client->getRequest()->getServer();
         $this->assertArrayHasKey('my', $server);
     }
+
+    public function testUncheckHidden()
+    {
+        $this->module->amOnPage('/form/uncheck_hidden');
+        $this->module->uncheckOption('#coffee-id');
+        $this->module->click("Submit Preference");
+        $form = data::get('form');
+        $this->assertEquals('0', $form['coffee']);
+    }
 }
