@@ -5,6 +5,8 @@
     <input type="hidden" name="coffee" value="123"> <!-- this should be discarded -->
 
     <!-- Do you need coffee ? (label) -->
+    <input type="hidden" name="coffee" value="8569" disabled="disabled">
+    <input type="hidden" name="coffee" value="8">
     <input type="hidden" name="coffee" value="0">
     <input type="checkbox" name="coffee" value="1" id="coffee-id" checked>
 
