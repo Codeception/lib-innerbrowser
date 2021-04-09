@@ -1788,5 +1788,12 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->click("Submit Preference");
         $form = data::get('form');
         $this->assertEquals('0', $form['coffee']);
+
+        // test all other inputs are submitted as intended
+        $this->assertEquals('mouse', $form['wireless']);
+        $this->assertEquals('1', $form['tea']);
+        $this->assertEquals('on', $form['vanilla']); // 'on' is set internally
+        $this->assertFalse(isset($form['butter']));
+
     }
 }
