@@ -1078,8 +1078,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                     continue;
                 } else {
                     // there might be multiple hidden input with same name, but we will only grab last one's value
-                    $hiddenFieldValue = $hiddenInput->last()->attr('value');
+                    $fieldValue = $hiddenInput->last()->attr('value');
                 }
+            } else {
+                $fieldValue = $field->getValue();
             }
 
 
@@ -1088,14 +1090,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                 if (!isset($values[$fieldName])) {
                     $values[$fieldName] = [];
                 }
-                $values[$fieldName][] = $field->getValue();
+                $values[$fieldName][] = $fieldValue;
             } else {
-                if (isset($hiddenFieldValue)) {
-                    $values[$fieldName] = $hiddenFieldValue;
-                    unset($hiddenFieldValue);
-                } else {
-                    $values[$fieldName] = $field->getValue();
-                }
+                $values[$fieldName] = $fieldValue;
             }
         }
         return $values;
