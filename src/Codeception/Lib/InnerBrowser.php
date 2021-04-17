@@ -1063,20 +1063,36 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     protected function getFormValuesFor(Form $form)
     {
+        $formNodeCrawler = new Crawler($form->getFormNode());
         $values = [];
         $fields = $form->all();
         foreach ($fields as $field) {
-            if ($field instanceof FileFormField || $field->isDisabled() || !$field->hasValue()) {
+            if ($field instanceof FileFormField || $field->isDisabled()) {
                 continue;
             }
+
+            if (!$field->hasValue()) {
+                // if unchecked a checkbox and if there is hidden input with same name to submit unchecked value
+                $hiddenInput = $formNodeCrawler->filter('input[type=hidden][name="'.$field->getName().'"]:not([disabled])');
+                if (!count($hiddenInput)) {
+                    continue;
+                } else {
+                    // there might be multiple hidden input with same name, but we will only grab last one's value
+                    $fieldValue = $hiddenInput->last()->attr('value');
+                }
+            } else {
+                $fieldValue = $field->getValue();
+            }
+
+
             $fieldName = $this->getSubmissionFormFieldName($field->getName());
             if (substr($field->getName(), -2) === '[]') {
                 if (!isset($values[$fieldName])) {
                     $values[$fieldName] = [];
                 }
-                $values[$fieldName][] = $field->getValue();
+                $values[$fieldName][] = $fieldValue;
             } else {
-                $values[$fieldName] = $field->getValue();
+                $values[$fieldName] = $fieldValue;
             }
         }
         return $values;
@@ -1295,7 +1311,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      *     'task' => 'lorem ipsum',
      *     'category' => 'miscellaneous',
      * ]]);
-     * ```    
+     * ```
      *
      * @param string $uri
      * @param array $params
