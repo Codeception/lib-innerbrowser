@@ -1072,7 +1072,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             }
 
             if (!$field->hasValue()) {
-                // if unchecked a checkboc and if there is hidden input with same name to submit unchecked value
+                // if unchecked a checkbox and if there is hidden input with same name to submit unchecked value
                 $hiddenInput = $formNodeCrawler->filter('input[type=hidden][name="'.$field->getName().'"]:not([disabled])');
                 if (!count($hiddenInput)) {
                     continue;
