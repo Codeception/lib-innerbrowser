@@ -192,7 +192,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @return \Symfony\Component\DomCrawler\Crawler|mixed
+     * @return \Symfony\Component\DomCrawler\Crawler
      */
     protected function clientRequest($method, $uri, array $parameters = [], array $files = [], array $server = [], $content = null, $changeHistory = true)
     {
@@ -308,9 +308,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $this->crawler;
     }
 
-    /**
-     * @return \Symfony\Component\BrowserKit\AbstractBrowser
-     */
     private function getRunningClient()
     {
         try {
@@ -1205,7 +1202,8 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @return mixed|string
+     * @param string|array $option
+     * @return string
      */
     protected function matchOption(Crawler $field, $option)
     {
@@ -1920,7 +1918,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * @param $result
      * @param $maxRedirects
      * @param $redirectCount
-     * @return mixed
+     * @return Crawler
      */
     protected function redirectIfNecessary($result, $maxRedirects, $redirectCount)
     {
@@ -2054,7 +2052,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @return string|null
+     * @return string
      */
     protected function getNormalizedResponseContent()
     {
