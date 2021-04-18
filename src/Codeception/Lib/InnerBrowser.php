@@ -21,15 +21,21 @@ use Codeception\Util\HttpCode;
 use Codeception\Util\Locator;
 use Codeception\Util\ReflectionHelper;
 use Codeception\Util\Uri;
+use DOMDocument;
+use DOMNode;
+use InvalidArgumentException;
+use LogicException;
+use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\DomCrawler\Crawler as SymfonyCrawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 use Symfony\Component\DomCrawler\Field\FileFormField;
 use Symfony\Component\DomCrawler\Field\FormField;
 use Symfony\Component\DomCrawler\Field\InputFormField;
 use Symfony\Component\DomCrawler\Field\TextareaFormField;
-use Symfony\Component\DomCrawler\Form;
+use Symfony\Component\DomCrawler\Form as SymfonyForm;
 use Symfony\Component\DomCrawler\Link;
 
 //Alias for Symfony < 4.3
@@ -40,18 +46,18 @@ if (!class_exists('Symfony\Component\BrowserKit\AbstractBrowser') && class_exist
 class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocator, ConflictsWithModule
 {
     /**
-     * @var \Symfony\Component\DomCrawler\Crawler
+     * @var SymfonyCrawler
      */
     protected $crawler;
 
     /**
      * @api
-     * @var \Symfony\Component\BrowserKit\AbstractBrowser
+     * @var AbstractBrowser
      */
     public $client;
 
     /**
-     * @var array|\Symfony\Component\DomCrawler\Form[]
+     * @var array|SymfonyForm[]
      */
     protected $forms = [];
 
@@ -114,17 +120,11 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->headers = [];
     }
 
-    /**
-     * @return string
-     */
     public function _conflicts()
     {
         return \Codeception\Lib\Interfaces\Web::class;
     }
 
-    /**
-     * @return \Symfony\Component\DomCrawler\Crawler
-     */
     public function _findElements($locator)
     {
         return $this->match($locator);
@@ -143,16 +143,15 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      *     $user = json_decode($userData);
      *     return $user->id;
      * }
-     * ?>
      * ```
      * Does not load the response into the module so you can't interact with response page (click, fill forms).
      * To load arbitrary page for interaction, use `_loadPage` method.
      *
      * @api
-     * @param $method
-     * @param $uri
-     * @param null $content
-     * @return mixed|Crawler
+     * @param string $method
+     * @param string $uri
+     * @param string $content
+     * @return string
      * @throws ExternalUrlException
      * @see `_loadPage`
      */
@@ -179,7 +178,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * {
      *    $this->assertStringContainsString($text, $this->getModule('{{MODULE_NAME}}')->_getResponseContent(), "response contains");
      * }
-     * ?>
      * ```
      *
      * @api
@@ -192,7 +190,11 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @return \Symfony\Component\DomCrawler\Crawler
+     * @param string $method
+     * @param string $uri
+     * @param string $content
+     * @param bool $changeHistory
+     * @return SymfonyCrawler
      */
     protected function clientRequest($method, $uri, array $parameters = [], array $files = [], array $server = [], $content = null, $changeHistory = true)
     {
@@ -275,13 +277,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * public function openCheckoutFormStep2($orderId) {
      *     $this->getModule('{{MODULE_NAME}}')->_loadPage('POST', '/checkout/step2', ['order' => $orderId]);
      * }
-     * ?>
      * ```
      *
      * @api
-     * @param $method
-     * @param $uri
-     * @param null $content
+     * @param string $method
+     * @param string $uri
+     * @param string $content
      */
     public function _loadPage(
         $method,
@@ -297,7 +298,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @return Crawler
+     * @return SymfonyCrawler
      * @throws ModuleException
      */
     private function getCrawler()
@@ -335,8 +336,8 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * Authenticates user for HTTP_AUTH
      *
-     * @param $username
-     * @param $password
+     * @param string $username
+     * @param string $password
      */
     public function amHttpAuthenticated($username, $password)
     {
@@ -353,7 +354,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * <?php
      * $I->haveHttpHeader('X-Requested-With', 'Codeception');
      * $I->amOnPage('test-headers.php');
-     * ?>
      * ```
      *
      * To use special chars in Header Key use HTML Character Entities:
@@ -364,7 +364,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * ```php
      * <?php
      * $I->haveHttpHeader('Client&#95;Id', 'Codeception');
-     * ?>
      * ```
      *
      * @param string $name the name of the request header
@@ -389,7 +388,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * // ...
      * $I->deleteHeader('X-Requested-With');
      * $I->amOnPage('some-other-page.php');
-     * ?>
      * ```
      *
      * @param string $name the name of the header to delete.
@@ -399,7 +397,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $name = implode('-', array_map('ucfirst', explode('-', strtolower(str_replace('_', '-', $name)))));
         unset($this->headers[$name]);
     }
-
 
     public function amOnPage($page)
     {
@@ -466,13 +463,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
     }
 
-
     /**
      * Clicks the link or submits the form when the button is clicked
      *
      * @return bool clicked something
      */
-    private function clickButton(\DOMNode $node)
+    private function clickButton(DOMNode $node)
     {
         /**
          * First we check if the button is associated to a form.
@@ -498,7 +494,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             $buttonName = $node->getAttribute('name');
             $formParams = $buttonName !== '' ? [$buttonName => $node->getAttribute('value')] : [];
             $this->proceedSubmitForm(
-                new Crawler($form, $this->getAbsoluteUrlFor($this->_getCurrentUri()), $this->getBaseUrl()),
+                new SymfonyCrawler($form, $this->getAbsoluteUrlFor($this->_getCurrentUri()), $this->getBaseUrl()),
                 $formParams
             );
             return true;
@@ -516,10 +512,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         throw new TestRuntimeException('Button is not inside a link or a form');
     }
 
-    private function openHrefFromDomNode(\DOMNode $node)
+    private function openHrefFromDomNode(DOMNode $node)
     {
         $link = new Link($node, $this->getBaseUrl());
-        $this->amOnPage(preg_replace('#\#.*#', '', $link->getUri()));
+        $this->amOnPage(preg_replace('/#.*/', '', $link->getUri()));
     }
 
     private function getBaseUrl()
@@ -583,7 +579,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             $this->fail("No links containing text '$text' were found in page " . $this->_getCurrentUri());
         }
         if ($url) {
-            $crawler = $crawler->filterXPath(sprintf('.//a[substring(@href, string-length(@href) - string-length(%1$s) + 1)=%1$s]', Crawler::xpathLiteral($url)));
+            $crawler = $crawler->filterXPath(sprintf('.//a[substring(@href, string-length(@href) - string-length(%1$s) + 1)=%1$s]', SymfonyCrawler::xpathLiteral($url)));
             if ($crawler->count() === 0) {
                 $this->fail("No links containing text '$text' and URL '$url' were found in page " . $this->_getCurrentUri());
             }
@@ -599,7 +595,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
         $crawler = $crawler->filterXPath(
             sprintf('.//a[substring(@href, string-length(@href) - string-length(%1$s) + 1)=%1$s]',
-            Crawler::xpathLiteral($url))
+                SymfonyCrawler::xpathLiteral($url))
         );
         if ($crawler->count() > 0) {
             $this->fail("Link containing text '$text' and URL '$url' was found in page " . $this->_getCurrentUri());
@@ -728,14 +724,14 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * recursing through array values if the field is not found.
      *
      * @param array $fields The previously found fields.
-     * @param Crawler $form The form in which to search for fields.
+     * @param SymfonyCrawler $form The form in which to search for fields.
      * @param string $name The field's name.
      * @param mixed $values
      * @return void
      */
     protected function pushFormField(&$fields, $form, $name, $values)
     {
-        $field = $form->filterXPath(sprintf('.//*[@name=%s]', Crawler::xpathLiteral($name)));
+        $field = $form->filterXPath(sprintf('.//*[@name=%s]', SymfonyCrawler::xpathLiteral($name)));
 
         if ($field->count()) {
             $fields[] = [$field, $values];
@@ -745,7 +741,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             }
         } else {
             throw new ElementNotFound(
-                sprintf('//*[@name=%s]', Crawler::xpathLiteral($name)),
+                sprintf('//*[@name=%s]', SymfonyCrawler::xpathLiteral($name)),
                 'Form'
             );
         }
@@ -778,7 +774,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * Get the values of a set of fields and also the texts of selected options.
      *
-     * @return array|mixed|string
+     * @return array|string
      */
     protected function getValueAndTextFromField(Crawler $nodes)
     {
@@ -810,7 +806,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * Get the values of a set of input fields.
      *
-     * @param Crawler $input
+     * @param SymfonyCrawler $input
      * @return array|string
      */
     protected function getInputValue($input)
@@ -854,7 +850,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * replaced in the array with the real value of the checkbox, and
      * the array is returned.
      *
-     * @param Crawler $form the form to find checkbox elements
+     * @param SymfonyCrawler $form the form to find checkbox elements
      * @param array $params the parameters to be submitted
      * @return array the $params array after replacing bool values
      */
@@ -893,11 +889,11 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * Submits the form currently selected in the passed Crawler, after
+     * Submits the form currently selected in the passed SymfonyCrawler, after
      * setting any values passed in $params and setting the value of the
      * passed button name.
      *
-     * @param Crawler $frmCrawl the form to submit
+     * @param SymfonyCrawler $frmCrawl the form to submit
      * @param array $params additional parameter values to set on the
      *        form
      * @param string $button the name of a submit button in the form
@@ -913,7 +909,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         if (!empty($button)) {
             $btnCrawl = $frmCrawl->filterXPath(sprintf(
                 '//*[not(@disabled) and @type="submit" and @name=%s]',
-                Crawler::xpathLiteral($button)
+                SymfonyCrawler::xpathLiteral($button)
             ));
             if (count($btnCrawl) > 0) {
                 $requestParams[$button] = $btnCrawl->attr('value');
@@ -991,7 +987,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * Returns a crawler Form object for the form pointed to by the
-     * passed Crawler.
+     * passed SymfonyCrawler.
      *
      * The returned form is an independent Crawler created to take care
      * of the following issues currently experienced by Crawler's form
@@ -1006,12 +1002,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * the desired functionality.  Other functions simply querying the
      * DOM wouldn't expect them.
      *
-     * @param Crawler $form the form
-     * @return Form
+     * @param SymfonyCrawler $form the form
+     * @return SymfonyForm
      */
     private function getFormFromCrawler(Crawler $form)
     {
-        $fakeDom = new \DOMDocument();
+        $fakeDom = new DOMDocument();
         $fakeDom->appendChild($fakeDom->importNode($form->getNode(0), true));
 
         //add fields having form attribute with id of this form
@@ -1027,7 +1023,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
         $node = $fakeDom->documentElement;
         $action = $this->getFormUrl($form);
-        $cloned = new Crawler($node, $action, $this->getBaseUrl());
+        $cloned = new SymfonyCrawler($node, $action, $this->getBaseUrl());
         $shouldDisable = $cloned->filter(
             'input:disabled:not([disabled]),select option:disabled,select optgroup:disabled option:not([disabled]),textarea:disabled:not([disabled]),select:disabled:not([disabled])'
         );
@@ -1041,7 +1037,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * Returns the DomCrawler\Form object for the form pointed to by
      * $node or its closes form parent.
      *
-     * @return \Symfony\Component\DomCrawler\Form
+     * @return SymfonyForm
      */
     protected function getFormFor(Crawler $node)
     {
@@ -1067,10 +1063,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * For form fields containing a name ending in [], an array is
      * created out of all field values with the given name.
      *
-     * @param \Symfony\Component\DomCrawler\Form the form
+     * @param SymfonyForm $form the form
      * @return array an array of name => value pairs
      */
-    protected function getFormValuesFor(Form $form)
+    protected function getFormValuesFor(SymfonyForm $form)
     {
         $values = [];
         $fields = $form->all();
@@ -1111,8 +1107,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * @param $field
-     *
-     * @return \Symfony\Component\DomCrawler\Crawler
+     * @return SymfonyCrawler
      */
     protected function getFieldsByLabelOrCss($field)
     {
@@ -1125,13 +1120,13 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
 
         // by label
-        $label = $this->strictMatch(['xpath' => sprintf('.//label[descendant-or-self::node()[text()[normalize-space()=%s]]]', Crawler::xpathLiteral($field))]);
+        $label = $this->strictMatch(['xpath' => sprintf('.//label[descendant-or-self::node()[text()[normalize-space()=%s]]]', SymfonyCrawler::xpathLiteral($field))]);
         if (count($label) > 0) {
             $label = $label->first();
             if ($label->attr('for')) {
                 $input = $this->strictMatch(['id' => $label->attr('for')]);
             } else {
-                $input = $this->strictMatch(['xpath' => sprintf('.//label[descendant-or-self::node()[text()[normalize-space()=%s]]]//input', Crawler::xpathLiteral($field))]);
+                $input = $this->strictMatch(['xpath' => sprintf('.//label[descendant-or-self::node()[text()[normalize-space()=%s]]]//input', SymfonyCrawler::xpathLiteral($field))]);
             }
         }
 
@@ -1153,7 +1148,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @return \Symfony\Component\DomCrawler\Crawler
+     * @return SymfonyCrawler
      */
     protected function getFieldByLabelOrCss($field)
     {
@@ -1267,10 +1262,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $form = $this->getFormFor($field = $this->getFieldByLabelOrCss($field));
         $filePath = codecept_data_dir() . $filename;
         if (!file_exists($filePath)) {
-            throw new \InvalidArgumentException("File does not exist: $filePath");
+            throw new InvalidArgumentException("File does not exist: $filePath");
         }
         if (!is_readable($filePath)) {
-            throw new \InvalidArgumentException("File is not readable: $filePath");
+            throw new InvalidArgumentException("File is not readable: $filePath");
         }
 
         $name = $field->attr('name');
@@ -1312,7 +1307,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      *     'task' => 'lorem ipsum',
      *     'category' => 'miscellaneous',
      * ]]);
-     * ```    
+     * ```
      *
      * @param string $uri
      * @param array $params
@@ -1333,7 +1328,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      *
      * @param $method
      * @param $uri
-     * @param $params
+     * @param array $params
      */
     public function sendAjaxRequest($method, $uri, $params = [])
     {
@@ -1358,7 +1353,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
         $debugDir = codecept_output_dir() . 'debug';
         if (!is_dir($debugDir)) {
-            mkdir($debugDir, 0777);
+            mkdir($debugDir);
         }
         $fileName = $debugDir . DIRECTORY_SEPARATOR . $name . '.html';
 
@@ -1386,8 +1381,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * @param $selector
-     *
-     * @return Crawler
+     * @return SymfonyCrawler
      */
     protected function match($selector)
     {
@@ -1406,7 +1400,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * @throws TestRuntimeException
-     * @return \Symfony\Component\DomCrawler\Crawler
+     * @return SymfonyCrawler
      */
     protected function strictMatch(array $by)
     {
@@ -1416,13 +1410,13 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             case 'id':
                 return $this->filterByCSS("#$locator");
             case 'name':
-                return $this->filterByXPath(sprintf('.//*[@name=%s]', Crawler::xpathLiteral($locator)));
+                return $this->filterByXPath(sprintf('.//*[@name=%s]', SymfonyCrawler::xpathLiteral($locator)));
             case 'css':
                 return $this->filterByCSS($locator);
             case 'xpath':
                 return $this->filterByXPath($locator);
             case 'link':
-                return $this->filterByXPath(sprintf('.//a[.=%s or contains(./@title, %s)]', Crawler::xpathLiteral($locator), Crawler::xpathLiteral($locator)));
+                return $this->filterByXPath(sprintf('.//a[.=%s or contains(./@title, %s)]', SymfonyCrawler::xpathLiteral($locator), SymfonyCrawler::xpathLiteral($locator)));
             case 'class':
                 return $this->filterByCSS(".$locator");
             default:
@@ -1456,9 +1450,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         throw new ElementNotFound($cssOrXPathOrRegex, 'Element that matches CSS or XPath or Regex');
     }
 
-    /**
-     * @return string|null
-     */
     public function grabAttributeFrom($cssOrXpath, $attribute)
     {
         $nodes = $this->match($cssOrXpath);
@@ -1468,9 +1459,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $nodes->first()->attr($attribute);
     }
 
-    /**
-     * @return array
-     */
     public function grabMultiple($cssOrXpath, $attribute = null)
     {
         $result = [];
@@ -1557,7 +1545,6 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * Grabs current page source code.
      *
      * @throws ModuleException if no page was opened.
-     *
      * @return string Current page source code.
      */
     public function grabPageSource()
@@ -1579,10 +1566,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertNull($this->client->getCookieJar()->get($cookie, $params['path'], $params['domain']));
     }
 
-    public function resetCookie($name, array $params = [])
+    public function resetCookie($cookie, array $params = [])
     {
         $params = array_merge($this->defaultCookieParameters, $params);
-        $this->client->getCookieJar()->expire($name, $params['path'], $params['domain']);
+        $this->client->getCookieJar()->expire($cookie, $params['path'], $params['domain']);
         $this->debugCookieJar();
     }
 
@@ -1660,7 +1647,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @return \Symfony\Component\DomCrawler\Crawler
+     * @return SymfonyCrawler
      */
     protected function matchSelectedOption($select)
     {
@@ -1691,7 +1678,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * $I->seeResponseCodeIs(\Codeception\Util\HttpCode::OK);
      * ```
      *
-     * @param $code
+     * @param int $code
      */
     public function seeResponseCodeIs($code)
     {
@@ -1706,8 +1693,8 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * Checks that response code is between a certain range. Between actually means [from <= CODE <= to]
      *
-     * @param $from
-     * @param $to
+     * @param int $from
+     * @param int $to
      */
     public function seeResponseCodeIsBetween($from, $to)
     {
@@ -1731,7 +1718,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * // recommended \Codeception\Util\HttpCode
      * $I->dontSeeResponseCodeIs(\Codeception\Util\HttpCode::OK);
      * ```
-     * @param $code
+     * @param int $code
      */
     public function dontSeeResponseCodeIs($code)
     {
@@ -1793,18 +1780,27 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertStringNotContainsString($title, $nodes->first()->text(), "page title contains $title");
     }
 
+    /**
+     * @param string $message
+     */
     protected function assertDomContains($nodes, $message, $text = '')
     {
         $constraint = new CrawlerConstraint($text, $this->_getCurrentUri());
         $this->assertThat($nodes, $constraint, $message);
     }
 
+    /**
+     * @param string $message
+     */
     protected function assertDomNotContains($nodes, $message, $text = '')
     {
         $constraint = new CrawlerNotConstraint($text, $this->_getCurrentUri());
         $this->assertThat($nodes, $constraint, $message);
     }
 
+    /**
+     * @param string $message
+     */
     protected function assertPageContains($needle, $message = '')
     {
         $constraint = new PageConstraint($needle, $this->_getCurrentUri());
@@ -1815,6 +1811,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         );
     }
 
+    /**
+     * @param string $message
+     */
     protected function assertPageNotContains($needle, $message = '')
     {
         $constraint = new PageConstraint($needle, $this->_getCurrentUri());
@@ -1825,6 +1824,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         );
     }
 
+    /**
+     * @param string $message
+     */
     protected function assertPageSourceContains($needle, $message = '')
     {
         $constraint = new PageConstraint($needle, $this->_getCurrentUri());
@@ -1835,6 +1837,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         );
     }
 
+    /**
+     * @param string $message
+     */
     protected function assertPageSourceNotContains($needle, $message = '')
     {
         $constraint = new PageConstraint($needle, $this->_getCurrentUri());
@@ -1846,9 +1851,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @param $name
-     * @param $form
-     * @param $dynamicField
+     * @param string $name
+     * @param array $form
+     * @param FormField $dynamicField
      * @return FormField
      */
     protected function matchFormField($name, $form, $dynamicField)
@@ -1857,7 +1862,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             return $form[$name];
         }
         $name = substr($name, 0, -2);
-        /** @var $item \Symfony\Component\DomCrawler\Field\FormField */
+        /** @var FormField $item */
         foreach ($form[$name] as $item) {
             if ($item == $dynamicField) {
                 return $item;
@@ -1868,7 +1873,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * @param $locator
-     * @return Crawler
+     * @return SymfonyCrawler
      */
     protected function filterByCSS($locator)
     {
@@ -1880,7 +1885,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * @param $locator
-     * @return Crawler
+     * @return SymfonyCrawler
      */
     protected function filterByXPath($locator)
     {
@@ -1891,13 +1896,13 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @param $requestParams
+     * @param array $requestParams
      * @return array
      */
     protected function getFormPhpValues($requestParams)
     {
         foreach ($requestParams as $name => $value) {
-            $qs = http_build_query([$name => $value], '', '&');
+            $qs = http_build_query([$name => $value]);
             if (!empty($qs)) {
                 // If the field's name is of the form of "array[key]",
                 // we'll remove it from the request parameters
@@ -1915,10 +1920,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * @param $result
-     * @param $maxRedirects
-     * @param $redirectCount
-     * @return Crawler
+     * @param SymfonyCrawler $result
+     * @param int $maxRedirects
+     * @param int $redirectCount
+     * @return SymfonyCrawler
      */
     protected function redirectIfNecessary($result, $maxRedirects, $redirectCount)
     {
@@ -1926,7 +1931,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $statusCode = $this->getResponseStatusCode();
         if ($locationHeader && $statusCode >= 300 && $statusCode < 400) {
             if ($redirectCount === $maxRedirects) {
-                throw new \LogicException(sprintf(
+                throw new LogicException(sprintf(
                     'The maximum number (%d) of redirections was reached.',
                     $maxRedirects
                 ));
@@ -1981,15 +1986,15 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     public function moveBack($numberOfSteps = 1)
     {
         if (!is_int($numberOfSteps) || $numberOfSteps < 1) {
-            throw new \InvalidArgumentException('numberOfSteps must be positive integer');
+            throw new InvalidArgumentException('numberOfSteps must be positive integer');
         }
         try {
             $history = $this->getRunningClient()->getHistory();
             for ($i = $numberOfSteps; $i > 0; $i--) {
                 $request = $history->back();
             }
-        } catch (\LogicException $e) {
-            throw new \InvalidArgumentException(
+        } catch (LogicException $e) {
+            throw new InvalidArgumentException(
                 sprintf(
                     'numberOfSteps is set to %d, but there are only %d previous steps in the history',
                     $numberOfSteps,
@@ -2021,7 +2026,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             $cookieJar = $this->client->getCookieJar();
             foreach ($this->config['cookies'] as &$cookie) {
                 if (!is_array($cookie) || !array_key_exists('Name', $cookie) || !array_key_exists('Value', $cookie)) {
-                    throw new \InvalidArgumentException('Cookies must have at least Name and Value attributes');
+                    throw new InvalidArgumentException('Cookies must have at least Name and Value attributes');
                 }
                 if (!isset($cookie['Domain'])) {
                     $cookie['Domain'] = $domain;
@@ -2038,7 +2043,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                 if (!isset($cookie['HttpOnly'])) {
                     $cookie['HttpOnly'] = false;
                 }
-                $cookieJar->set(new \Symfony\Component\BrowserKit\Cookie(
+                $cookieJar->set(new Cookie(
                     $cookie['Name'],
                     $cookie['Value'],
                     $cookie['Expires'],
@@ -2087,8 +2092,8 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * ```php
      * $I->haveServerParameter('name', 'value');
      * ```
-     * @param $name
-     * @param $value
+     * @param string $name
+     * @param string $value
      */
     public function haveServerParameter($name, $value)
     {
