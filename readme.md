@@ -7,6 +7,10 @@ Parent library for all Codeception framework modules and PhpBrowser.
 [![Total Downloads](https://poser.pugx.org/codeception/lib-innerbrowser/downloads)](https://packagist.org/packages/codeception/lib-innerbrowser)
 [![License](https://poser.pugx.org/codeception/lib-innerbrowser/license)](/LICENSE)
 
+## Requirements
+
+* `PHP 7.1` or higher.
+
 ## Installation
 
 ```

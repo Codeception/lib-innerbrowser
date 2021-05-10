@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 use Codeception\Stub;
 
 require_once __DIR__ . '/TestsForWeb.php';
@@ -6,7 +9,7 @@ require_once __DIR__ . '/TestsForWeb.php';
 /**
  * @group appveyor
  */
-class FrameworksTest extends TestsForWeb
+final class FrameworksTest extends TestsForWeb
 {
     /**
      * @var \Codeception\Lib\Framework
@@ -79,6 +82,8 @@ class FrameworksTest extends TestsForWeb
                 $this->fail('Expected to get exception here');
             } catch (\InvalidArgumentException $e) {
                 codecept_debug('Exception: ' . $e->getMessage());
+            } catch (\TypeError $e) {
+                codecept_debug('Error: ' . $e->getMessage());
             }
         }
     }
