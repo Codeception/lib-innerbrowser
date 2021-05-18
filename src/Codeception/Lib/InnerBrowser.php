@@ -23,6 +23,7 @@ use Codeception\Util\ReflectionHelper;
 use Codeception\Util\Uri;
 use DOMDocument;
 use DOMNode;
+use Exception;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\BrowserKit\AbstractBrowser;
@@ -78,6 +79,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     private $baseUrl;
 
+    /**
+     * @param Exception $fail
+     */
     public function _failed(TestInterface $test, $fail)
     {
         try {
@@ -260,7 +264,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $this->redirectIfNecessary($result, $maxRedirects, 0);
     }
 
-    protected function isInternalDomain($domain): bool
+    protected function isInternalDomain(string $domain): bool
     {
         if ($this->internalDomains === null) {
             $this->internalDomains = $this->getInternalDomains();
@@ -591,8 +595,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertTrue(true);
     }
 
-    public function dontSeeLink($text, $url = '')
+    public function dontSeeLink($text, $url = null)
     {
+        $url = (string) $url;
         $crawler = $this->getCrawler()->selectLink($text);
         if (!$url && $crawler->count() > 0) {
             $this->fail("Link containing text '$text' was found in page " . $this->_getCurrentUri());
@@ -1294,10 +1299,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * Sends an ajax GET request with the passed parameters.
      * See `sendAjaxPostRequest()`
      *
-     * @param $uri
+     * @param string $uri
      * @param array $params
      */
-    public function sendAjaxGetRequest($uri, array $params = []): void
+    public function sendAjaxGetRequest(string $uri, array $params = []): void
     {
         $this->sendAjaxRequest('GET', $uri, $params);
     }
@@ -1339,11 +1344,11 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * $I->sendAjaxRequest('PUT', '/posts/7', ['title' => 'new title']);
      * ```
      *
-     * @param $method
-     * @param $uri
+     * @param string $method
+     * @param string $uri
      * @param array $params
      */
-    public function sendAjaxRequest($method, $uri, array $params = []): void
+    public function sendAjaxRequest(string $method, string $uri, array $params = []): void
     {
         $this->clientRequest($method, $uri, $params, [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'], null, false);
     }
@@ -1802,7 +1807,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertThat($nodes, $constraint, $message);
     }
 
-    protected function assertPageContains($needle, string $message = ''): void
+    protected function assertPageContains(string $needle, string $message = ''): void
     {
         $constraint = new PageConstraint($needle, $this->_getCurrentUri());
         $this->assertThat(
@@ -1812,10 +1817,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         );
     }
 
-    /**
-     * @param string $message
-     */
-    protected function assertPageNotContains($needle, string $message = ''): void
+    protected function assertPageNotContains(string $needle, string $message = ''): void
     {
         $constraint = new PageConstraint($needle, $this->_getCurrentUri());
         $this->assertThatItsNot(
@@ -1825,10 +1827,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         );
     }
 
-    /**
-     * @param string $message
-     */
-    protected function assertPageSourceContains($needle, string $message = ''): void
+    protected function assertPageSourceContains(string $needle, string $message = ''): void
     {
         $constraint = new PageConstraint($needle, $this->_getCurrentUri());
         $this->assertThat(
@@ -1838,10 +1837,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         );
     }
 
-    /**
-     * @param string $message
-     */
-    protected function assertPageSourceNotContains($needle, string $message = ''): void
+    protected function assertPageSourceNotContains(string $needle, string $message = ''): void
     {
         $constraint = new PageConstraint($needle, $this->_getCurrentUri());
         $this->assertThatItsNot(
@@ -1872,11 +1868,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         throw new TestRuntimeException("None of form fields by {$name}[] were not matched");
     }
 
-    /**
-     * @param $locator
-     * @return SymfonyCrawler
-     */
-    protected function filterByCSS($locator): SymfonyCrawler
+    protected function filterByCSS(string $locator): SymfonyCrawler
     {
         if (!Locator::isCSS($locator)) {
             throw new MalformedLocatorException($locator, 'css');
@@ -1884,11 +1876,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $this->getCrawler()->filter($locator);
     }
 
-    /**
-     * @param $locator
-     * @return SymfonyCrawler
-     */
-    protected function filterByXPath($locator): SymfonyCrawler
+    protected function filterByXPath(string $locator): SymfonyCrawler
     {
         if (!Locator::isXPath($locator)) {
             throw new MalformedLocatorException($locator, 'xpath');
