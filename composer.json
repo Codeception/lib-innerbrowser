@@ -17,19 +17,19 @@
 	],
 	"minimum-stability": "RC",
 	"require": {
-		"php": "^7.1 || ^8.0",
+		"php": "^7.3 || ^8.0",
 		"ext-dom": "*",
 		"ext-json": "*",
 		"ext-mbstring": "*",
-		"codeception/codeception": "*@dev",
-		"symfony/browser-kit": ">=3.4 <6.0",
-		"symfony/dom-crawler": ">=3.4 <6.0"
+		"codeception/codeception": "^5.0 || *@dev",
+		"symfony/browser-kit": ">=4.4 <6.0",
+		"symfony/dom-crawler": ">=4.4 <6.0"
 	},
 	"require-dev": {
 		"codeception/util-universalframework": "dev-master"
 	},
 	"conflict": {
-		"codeception/codeception": "<4.0"
+		"codeception/codeception": "<5.0"
 	},
 	"autoload": {
 		"classmap": [
