@@ -21,7 +21,7 @@
 		"ext-dom": "*",
 		"ext-json": "*",
 		"ext-mbstring": "*",
-		"codeception/codeception": "^5.0 || *@dev",
+		"codeception/codeception": "dev-5.0-interfaces",
 		"symfony/browser-kit": ">=4.4 <6.0",
 		"symfony/dom-crawler": ">=4.4 <6.0"
 	},
