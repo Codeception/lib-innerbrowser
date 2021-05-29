@@ -205,7 +205,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/button');
         $this->module->click("btn0");
         $form = data::get('form');
-        $this->assertEquals('val', $form['text']);
+        $this->assertSame('val', $form['text']);
     }
 
     public function testClickByLinkTitle()
@@ -232,7 +232,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->checkOption('#checkin');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('agree', $form['terms']);
+        $this->assertSame('agree', $form['terms']);
     }
 
     public function testCheckboxByName()
@@ -241,7 +241,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->checkOption('terms');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('agree', $form['terms']);
+        $this->assertSame('agree', $form['terms']);
     }
 
     public function testCheckboxByLabel()
@@ -250,7 +250,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->checkOption('I Agree');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('agree', $form['terms']);
+        $this->assertSame('agree', $form['terms']);
     }
 
     /**
@@ -263,7 +263,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->checkOption('#id2');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('second', reset($form['field']));
+        $this->assertSame('second', reset($form['field']));
     }
 
     public function testSelectByCss()
@@ -272,7 +272,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->selectOption('form select[name=age]', 'adult');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('adult', $form['age']);
+        $this->assertSame('adult', $form['age']);
     }
 
     public function testSelectByName()
@@ -281,7 +281,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->selectOption('age', 'adult');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('adult', $form['age']);
+        $this->assertSame('adult', $form['age']);
     }
 
     public function testSelectByLabel()
@@ -290,7 +290,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->selectOption('Select your age', 'dead');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('dead', $form['age']);
+        $this->assertSame('dead', $form['age']);
     }
 
     public function testSelectByLabelAndOptionText()
@@ -299,7 +299,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->selectOption('Select your age', '21-60');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('adult', $form['age']);
+        $this->assertSame('adult', $form['age']);
     }
 
     public function testSeeSelectedOption()
@@ -325,7 +325,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->seeOptionIsSelected('#age', 'below 13');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('child', $form['age'], 'first option was not submitted');
+        $this->assertSame('child', $form['age'], 'first option was not submitted');
     }
 
     /**
@@ -337,7 +337,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/example8');
         $this->module->click('form button[value="second"]');
         $form = data::get('form');
-        $this->assertEquals('second', $form['submit']);
+        $this->assertSame('second', $form['submit']);
     }
 
     /**
@@ -351,7 +351,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/example11');
         $this->module->click('form button[value="fifth"]');
         $form = data::get('form');
-        $this->assertEquals('fifth', $form['submit']);
+        $this->assertSame('fifth', $form['submit']);
     }
 
     public function testSelectMultipleOptionsByText()
@@ -360,7 +360,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->selectOption('What do you like the most?', array('Play Video Games', 'Have Sex'));
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals(array('play', 'adult'), $form['like']);
+        $this->assertSame(array('play', 'adult'), $form['like']);
     }
 
     public function testSelectMultipleOptionsByValue()
@@ -369,7 +369,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->selectOption('What do you like the most?', array('eat', 'adult'));
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals(array('eat', 'adult'), $form['like']);
+        $this->assertSame(array('eat', 'adult'), $form['like']);
     }
 
     public function testHidden()
@@ -377,7 +377,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/hidden');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('kill_people', $form['action']);
+        $this->assertSame('kill_people', $form['action']);
     }
 
     public function testTextareaByCss()
@@ -386,7 +386,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('textarea', 'Nothing special');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('Nothing special', $form['description']);
+        $this->assertSame('Nothing special', $form['description']);
     }
 
     public function testTextareaByLabel()
@@ -395,7 +395,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('Description', 'Nothing special');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('Nothing special', $form['description']);
+        $this->assertSame('Nothing special', $form['description']);
     }
 
     public function testTextFieldByCss()
@@ -404,7 +404,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('#name', 'Nothing special');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('Nothing special', $form['name']);
+        $this->assertSame('Nothing special', $form['name']);
     }
 
     public function testTextFieldByName()
@@ -414,8 +414,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('LoginForm[password]', '123456');
         $this->module->click('Login');
         $login = data::get('form');
-        $this->assertEquals('davert', $login['LoginForm']['username']);
-        $this->assertEquals('123456', $login['LoginForm']['password']);
+        $this->assertSame('davert', $login['LoginForm']['username']);
+        $this->assertSame('123456', $login['LoginForm']['password']);
     }
 
     public function testTextFieldByLabel()
@@ -424,7 +424,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('Name', 'Nothing special');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('Nothing special', $form['name']);
+        $this->assertSame('Nothing special', $form['name']);
     }
 
     public function testTextFieldByLabelWithoutFor()
@@ -433,7 +433,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('Other label', 'Nothing special');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('Nothing special', $form['othername']);
+        $this->assertSame('Nothing special', $form['othername']);
     }
 
     public function testFileFieldByCss()
@@ -701,26 +701,26 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/');
         $result = $this->module->grabTextFrom('h1');
-        $this->assertEquals("Welcome to test app!", $result);
+        $this->assertSame("Welcome to test app!", $result);
         $result = $this->module->grabTextFrom('descendant-or-self::h1');
-        $this->assertEquals("Welcome to test app!", $result);
+        $this->assertSame("Welcome to test app!", $result);
         $result = $this->module->grabTextFrom('~Welcome to (\w+) app!~');
-        $this->assertEquals('test', $result);
+        $this->assertSame('test', $result);
     }
 
     public function testGrabValueFrom()
     {
         $this->module->amOnPage('/form/hidden');
         $result = $this->module->grabValueFrom('#action');
-        $this->assertEquals("kill_people", $result);
+        $this->assertSame("kill_people", $result);
         $result = $this->module->grabValueFrom("descendant-or-self::form/descendant::input[@name='action']");
-        $this->assertEquals("kill_people", $result);
+        $this->assertSame("kill_people", $result);
         $this->module->amOnPage('/form/textarea');
         $result = $this->module->grabValueFrom('#description');
-        $this->assertEquals('sunrise', $result);
+        $this->assertSame('sunrise', $result);
         $this->module->amOnPage('/form/select');
         $result = $this->module->grabValueFrom('#age');
-        $this->assertEquals('oldfag', $result);
+        $this->assertSame('oldfag', $result);
     }
 
     /**
@@ -731,19 +731,19 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/bug3866');
         $this->module->fillField('empty', 'new value');
         $result = $this->module->grabValueFrom('#empty');
-        $this->assertEquals('new value', $result);
+        $this->assertSame('new value', $result);
         $this->module->fillField('empty_textarea', 'new value');
         $result = $this->module->grabValueFrom('#empty_textarea');
-        $this->assertEquals('new value', $result);
+        $this->assertSame('new value', $result);
         $this->module->fillField('//textarea[@name="textarea[name][]"]', 'new value');
         $result = $this->module->grabValueFrom('#textarea_with_square_bracket');
-        $this->assertEquals('new value', $result);
+        $this->assertSame('new value', $result);
     }
 
     public function testGrabAttributeFrom()
     {
         $this->module->amOnPage('/search');
-        $this->assertEquals('get', $this->module->grabAttributeFrom('form', 'method'));
+        $this->assertSame('get', $this->module->grabAttributeFrom('form', 'method'));
     }
 
     public function testLinksWithSimilarNames()
@@ -800,7 +800,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->dontSeeCookie('evil_cookie');
 
         $cookie = $this->module->grabCookie($cookie_name);
-        $this->assertEquals($cookie_value, $cookie);
+        $this->assertSame($cookie_value, $cookie);
 
         $this->module->resetCookie($cookie_name);
         $this->module->dontSeeCookie($cookie_name);
@@ -817,7 +817,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->dontSeeCookie('evil_cookie');
 
         $cookie = $this->module->grabCookie($cookie_name, ['path' => '/info']);
-        $this->assertEquals($cookie_value, $cookie);
+        $this->assertSame($cookie_value, $cookie);
 
         $this->module->resetCookie($cookie_name, ['path' => '/info']);
         $this->module->dontSeeCookie($cookie_name, ['path' => '/info']);
@@ -947,8 +947,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->checkOption('#LoginForm_rememberMe');
         $this->module->click('Login');
         $login = data::get('form');
-        $this->assertEquals('davert', $login['LoginForm']['username']);
-        $this->assertEquals('123456', $login['LoginForm']['password']);
+        $this->assertSame('davert', $login['LoginForm']['username']);
+        $this->assertSame('123456', $login['LoginForm']['password']);
         $this->assertNotEmpty($login['LoginForm']['rememberMe']);
     }
 
@@ -959,9 +959,9 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('input[name=password]', '123456');
         $this->module->click('Log on');
         $login = data::get('form');
-        $this->assertEquals('davert', $login['username']);
-        $this->assertEquals('123456', $login['password']);
-        $this->assertEquals('login', $login['action']);
+        $this->assertSame('davert', $login['username']);
+        $this->assertSame('123456', $login['password']);
+        $this->assertSame('login', $login['action']);
     }
 
     public function testAmpersand()
@@ -1044,13 +1044,13 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
                 'description' => 'Is Codeception maintainer'
         ));
         $form = data::get('form');
-        $this->assertEquals('Davert', $form['name']);
-        $this->assertEquals('Is Codeception maintainer', $form['description']);
+        $this->assertSame('Davert', $form['name']);
+        $this->assertSame('Is Codeception maintainer', $form['description']);
         $this->assertArrayNotHasKey('disabled_fieldset', $form);
         $this->assertArrayNotHasKey('disabled_fieldset_textarea', $form);
         $this->assertArrayNotHasKey('disabled_fieldset_select', $form);
         $this->assertArrayNotHasKey('disabled_field', $form);
-        $this->assertEquals('kill_all', $form['action']);
+        $this->assertSame('kill_all', $form['action']);
     }
 
     public function testSubmitFormWithFillField()
@@ -1062,8 +1062,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
             'description' => 'Is from Iliyum, NY'
         ]);
         $form = data::get('form');
-        $this->assertEquals('Kilgore Trout', $form['name']);
-        $this->assertEquals('Is from Iliyum, NY', $form['description']);
+        $this->assertSame('Kilgore Trout', $form['name']);
+        $this->assertSame('Is from Iliyum, NY', $form['description']);
     }
 
     public function testSubmitFormWithoutButton()
@@ -1073,7 +1073,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
                 'text' => 'Hello!'
         ));
         $form = data::get('form');
-        $this->assertEquals('Hello!', $form['text']);
+        $this->assertSame('Hello!', $form['text']);
     }
 
     public function testSubmitFormWithAmpersand()
@@ -1081,7 +1081,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/submitform_ampersands');
         $this->module->submitForm('form', []);
         $form = data::get('form');
-        $this->assertEquals('this & that', $form['test']);
+        $this->assertSame('this & that', $form['test']);
     }
 
     public function testSubmitFormWithArrayField()
@@ -1104,8 +1104,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         ]);
         $form = data::get('form');
         $this->assertCount(2, $form['select']);
-        $this->assertEquals('see test one', $form['select'][0]);
-        $this->assertEquals('not seen four', $form['select'][1]);
+        $this->assertSame('see test one', $form['select'][0]);
+        $this->assertSame('not seen four', $form['select'][1]);
     }
 
     public function testSubmitFormWithMultiSelect()
@@ -1114,8 +1114,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->submitForm('form', []);
         $form = data::get('form');
         $this->assertCount(2, $form['select']);
-        $this->assertEquals('see test one', $form['select'][0]);
-        $this->assertEquals('see test two', $form['select'][1]);
+        $this->assertSame('see test one', $form['select'][0]);
+        $this->assertSame('see test two', $form['select'][1]);
     }
 
     public function testSubmitFormCheckboxWithArrayParameter()
@@ -1130,9 +1130,9 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         ]);
         $form = data::get('form');
         $this->assertCount(3, $form['checkbox']);
-        $this->assertEquals('not seen one', $form['checkbox'][0]);
-        $this->assertEquals('see test two', $form['checkbox'][1]);
-        $this->assertEquals('not seen three', $form['checkbox'][2]);
+        $this->assertSame('not seen one', $form['checkbox'][0]);
+        $this->assertSame('see test two', $form['checkbox'][1]);
+        $this->assertSame('not seen three', $form['checkbox'][2]);
     }
 
     public function testSubmitFormCheckboxWithBooleanArrayParameter()
@@ -1147,8 +1147,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         ]);
         $form = data::get('form');
         $this->assertCount(2, $form['checkbox']);
-        $this->assertEquals('not seen one', $form['checkbox'][0]);
-        $this->assertEquals('not seen two', $form['checkbox'][1]);
+        $this->assertSame('not seen one', $form['checkbox'][0]);
+        $this->assertSame('not seen two', $form['checkbox'][1]);
     }
 
     /**
@@ -1165,7 +1165,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/textarea');
         $this->module->submitForm('form', []);
         $form = data::get('form');
-        $this->assertEquals('sunrise', $form['description']);
+        $this->assertSame('sunrise', $form['description']);
     }
 
     /**
@@ -1184,10 +1184,10 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     public function testSelectTwoSubmitsByText()
     {
         $this->module->amOnPage('/form/select_two_submits');
-        $this->module->selectOption('What kind of sandwich would you like?', 2);
+        $this->module->selectOption('What kind of sandwich would you like?', '2');
         $this->module->click('Save');
         $form = data::get('form');
-        $this->assertEquals(2, $form['sandwich_select']);
+        $this->assertSame('2', $form['sandwich_select']);
     }
 
     public function testSelectTwoSubmitsByCSS()
@@ -1196,7 +1196,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->selectOption("form select[name='sandwich_select']", '2');
         $this->module->click('Save');
         $form = data::get('form');
-        $this->assertEquals(2, $form['sandwich_select']);
+        $this->assertSame('2', $form['sandwich_select']);
     }
 
     protected function shouldFail()
@@ -1215,8 +1215,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $form = data::get('form');
         $this->assertArrayHasKey('button2', $form);
         $this->assertArrayHasKey('username', $form);
-        $this->assertEquals('value2', $form['button2']);
-        $this->assertEquals('fred', $form['username']);
+        $this->assertSame('value2', $form['button2']);
+        $this->assertSame('fred', $form['username']);
     }
 
     /**
@@ -1230,8 +1230,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $form = data::get('form');
         $this->assertArrayHasKey('button2', $form);
         $this->assertArrayHasKey('username', $form);
-        $this->assertEquals('value2', $form['button2']);
-        $this->assertEquals('bob', $form['username']);
+        $this->assertSame('value2', $form['button2']);
+        $this->assertSame('bob', $form['username']);
     }
 
     /*
@@ -1274,8 +1274,8 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $form = data::get('form');
         $this->assertArrayHasKey('checkbox1', $form, 'Checkbox value not sent');
         $this->assertArrayHasKey('radio1', $form, 'Radio button value not sent');
-        $this->assertEquals('testing', $form['checkbox1']);
-        $this->assertEquals('to be sent', $form['radio1']);
+        $this->assertSame('testing', $form['checkbox1']);
+        $this->assertSame('to be sent', $form['radio1']);
     }
 
     public function testSubmitFormCheckboxWithBoolean()
@@ -1286,7 +1286,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         ));
         $form = data::get('form');
         $this->assertArrayHasKey('checkbox1', $form, 'Checkbox value not sent');
-        $this->assertEquals('testing', $form['checkbox1']);
+        $this->assertSame('testing', $form['checkbox1']);
 
         $this->module->amOnPage('/form/example16');
         $this->module->submitForm('form', array(
@@ -1325,7 +1325,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
             'Button values for buttons 1, 2 and 4 should not be set'
         );
         $this->assertArrayHasKey('button3', $form, 'Button value for button3 should be set');
-        $this->assertEquals($form['button3'], 'third', 'Button value for button3 should equal third');
+        $this->assertSame($form['button3'], 'third', 'Button value for button3 should equal third');
 
         $this->module->amOnPage('/form/form_with_buttons');
         $this->module->submitForm('form', array(
@@ -1337,7 +1337,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
             'Button values for buttons 1, 2 and 3 should not be set'
         );
         $this->assertArrayHasKey('button4', $form, 'Button value for button4 should be set');
-        $this->assertEquals($form['button4'], 'fourth', 'Button value for button4 should equal fourth');
+        $this->assertSame($form['button4'], 'fourth', 'Button value for button4 should equal fourth');
     }
 
     /**
@@ -1407,7 +1407,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('price', '19.99');
         $this->module->click('Create');
         $data = data::get('form');
-        $this->assertEquals('Special Widget', $data['title']);
+        $this->assertSame('Special Widget', $data['title']);
     }
 
     /**
@@ -1447,7 +1447,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $data = data::get('form');
         $this->assertArrayHasKey('second-field', $data);
         $this->assertArrayNotHasKey('first-field', $data);
-        $this->assertEquals('Killgore Trout', $data['second-field']);
+        $this->assertSame('Killgore Trout', $data['second-field']);
     }
 
     public function testSubmitAdjacentFormsByButton()
@@ -1459,7 +1459,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $data = data::get('form');
         $this->assertArrayHasKey('first-field', $data);
         $this->assertArrayNotHasKey('second-field', $data);
-        $this->assertEquals('First', $data['first-field']);
+        $this->assertSame('First', $data['first-field']);
 
         $this->module->amOnPage('/form/submit_adjacentforms');
         $this->module->fillField('first-field', 'First');
@@ -1468,7 +1468,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $data = data::get('form');
         $this->assertArrayNotHasKey('first-field', $data);
         $this->assertArrayHasKey('second-field', $data);
-        $this->assertEquals('Second', $data['second-field']);
+        $this->assertSame('Second', $data['second-field']);
     }
 
     public function testArrayField()
@@ -1521,7 +1521,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('Name', 'this & that');
         $this->module->click('Submit');
         $form = data::get('form');
-        $this->assertEquals('this & that', $form['name']);
+        $this->assertSame('this & that', $form['name']);
     }
 
     public function testSeeInDeactivatedField()
@@ -1545,20 +1545,20 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         
         $arr = $this->module->grabMultiple('#grab-multiple a:first-child');
         $this->assertCount(1, $arr);
-        $this->assertEquals('First', $arr[0]);
+        $this->assertSame('First', $arr[0]);
         
         $arr = $this->module->grabMultiple('#grab-multiple a');
         $this->assertCount(3, $arr);
-        $this->assertEquals('First', $arr[0]);
-        $this->assertEquals('Second', $arr[1]);
-        $this->assertEquals('Third', $arr[2]);
+        $this->assertSame('First', $arr[0]);
+        $this->assertSame('Second', $arr[1]);
+        $this->assertSame('Third', $arr[2]);
         
         // href for WebDriver with selenium returns a full link, so testing with ID
         $arr = $this->module->grabMultiple('#grab-multiple a', 'id');
         $this->assertCount(3, $arr);
-        $this->assertEquals('first-link', $arr[0]);
-        $this->assertEquals('second-link', $arr[1]);
-        $this->assertEquals('third-link', $arr[2]);
+        $this->assertSame('first-link', $arr[0]);
+        $this->assertSame('second-link', $arr[1]);
+        $this->assertSame('third-link', $arr[2]);
     }
 
     /**
@@ -1595,7 +1595,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->selectOption('age', ['value' => '20']);
         $this->module->click('Submit');
         $data = data::get('form');
-        $this->assertEquals('20', $data['age']);
+        $this->assertSame('20', $data['age']);
     }
 
     public function testSelectOptionTextSelector()
@@ -1758,7 +1758,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('password', new \Codeception\Step\Argument\PasswordArgument('thisissecret'));
         $this->module->click('Submit');
         $data = data::get('form');
-        $this->assertEquals('thisissecret', $data['password']);
+        $this->assertSame('thisissecret', $data['password']);
     }
 
 
@@ -1790,12 +1790,12 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->uncheckOption('#coffee-id');
         $this->module->click("Submit Preference");
         $form = data::get('form');
-        $this->assertEquals('0', $form['coffee']);
+        $this->assertSame('0', $form['coffee']);
 
         // test all other inputs are submitted as intended
-        $this->assertEquals('mouse', $form['wireless']);
-        $this->assertEquals('1', $form['tea']);
-        $this->assertEquals('on', $form['vanilla']); // 'on' is set internally
+        $this->assertSame('mouse', $form['wireless']);
+        $this->assertSame('1', $form['tea']);
+        $this->assertSame('on', $form['vanilla']); // 'on' is set internally
         $this->assertFalse(isset($form['butter']));
 
     }

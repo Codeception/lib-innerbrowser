@@ -636,12 +636,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     public function seeCurrentUrlEquals(string $uri): void
     {
-        $this->assertEquals(rtrim($uri, '/'), rtrim($this->_getCurrentUri(), '/'));
+        $this->assertSame(rtrim($uri, '/'), rtrim($this->_getCurrentUri(), '/'));
     }
 
     public function dontSeeCurrentUrlEquals(string $uri): void
     {
-        $this->assertNotEquals(rtrim($uri, '/'), rtrim($this->_getCurrentUri(), '/'));
+        $this->assertNotSame(rtrim($uri, '/'), rtrim($this->_getCurrentUri(), '/'));
     }
 
     public function seeCurrentUrlMatches(string $uri): void
@@ -679,7 +679,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     public function dontSeeCheckboxIsChecked($checkbox): void
     {
         $checkboxes = $this->getFieldsByLabelOrCss($checkbox);
-        $this->assertEquals(0, $checkboxes->filter('input[checked=checked]')->count());
+        $this->assertSame(0, $checkboxes->filter('input[checked=checked]')->count());
     }
 
     public function seeInField($field, $value): void
@@ -1636,7 +1636,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                 'Number of elements counted differs from expected range'
             );
         } else {
-            $this->assertEquals(
+            $this->assertSame(
                 $expected,
                 $counted,
                 'Number of elements counted differs from expected number'
@@ -1652,21 +1652,21 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $value = $selected->getNode(0)->tagName === 'option'
             ? $selected->text()
             : $selected->getNode(0)->getAttribute('value');
-        $this->assertEquals($optionText, $value);
+        $this->assertSame($optionText, $value);
     }
 
     public function dontSeeOptionIsSelected($selector, string $optionText)
     {
         $selected = $this->matchSelectedOption($selector);
         if ($selected->count() === 0) {
-            $this->assertEquals(0, $selected->count());
+            $this->assertSame(0, $selected->count());
             return;
         }
         //If element is radio then we need to check value
         $value = $selected->getNode(0)->tagName === 'option'
             ? $selected->text()
             : $selected->getNode(0)->getAttribute('value');
-        $this->assertNotEquals($optionText, $value);
+        $this->assertNotSame($optionText, $value);
     }
 
     protected function matchSelectedOption($select): SymfonyCrawler
@@ -1707,7 +1707,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             HttpCode::getDescription($code),
             HttpCode::getDescription($this->getResponseStatusCode())
         );
-        $this->assertEquals($code, $this->getResponseStatusCode(), $failureMessage);
+        $this->assertSame($code, $this->getResponseStatusCode(), $failureMessage);
     }
 
     /**
@@ -1746,7 +1746,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             'Expected HTTP status code other than %s',
             HttpCode::getDescription($code)
         );
-        $this->assertNotEquals($code, $this->getResponseStatusCode(), $failureMessage);
+        $this->assertNotSame($code, $this->getResponseStatusCode(), $failureMessage);
     }
 
     /**

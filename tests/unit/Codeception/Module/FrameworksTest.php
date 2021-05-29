@@ -93,7 +93,7 @@ final class FrameworksTest extends TestsForWeb
         $container = Stub::make('Codeception\Lib\ModuleContainer');
         $module = Stub::construct(get_class($this->module), [$container], [
             '_savePageSource' => Stub\Expected::once(function ($filename) {
-                $this->assertEquals(codecept_log_dir('Codeception.Module.UniversalFramework.looks.like..test.fail.html'), $filename);
+                $this->assertSame(codecept_log_dir('Codeception.Module.UniversalFramework.looks.like..test.fail.html'), $filename);
             }),
         ]);
         $module->_initialize();
