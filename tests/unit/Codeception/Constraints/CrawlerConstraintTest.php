@@ -1,5 +1,8 @@
 <?php
-class CrawlerConstraintTest extends \Codeception\PHPUnit\TestCase
+
+declare(strict_types=1);
+
+final class CrawlerConstraintTest extends \Codeception\PHPUnit\TestCase
 {
 
     /**

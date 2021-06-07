@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Codeception\Util;
 
 /**
@@ -16,8 +18,6 @@ namespace Codeception\Util;
  * $I->seeResponseCodeIs(HttpCode::OK);
  * $I->dontSeeResponseCodeIs(HttpCode::NOT_FOUND);
  * ```
- *
- *
  */
 class HttpCode
 {
@@ -347,10 +347,9 @@ class HttpCode
      * HttpCode::getDescription(401); // '401 (Unauthorized)'
      * ```
      *
-     * @param int $code
      * @return int|string
      */
-    public static function getDescription($code)
+    public static function getDescription(int $code)
     {
         if (isset(self::$codes[$code])) {
             return sprintf('%d (%s)', $code, self::$codes[$code]);
