@@ -1014,7 +1014,14 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $formId = $form->attr('id');
         if ($formId !== null) {
             $fakeForm = $fakeDom->firstChild;
-            $topParent = $form->parents()->last();
+
+            // The parents() method is deprecated since symfony/dom-crawler v5.3 (https://github.com/symfony/symfony/pull/39684)
+            if (method_exists($form, 'ancestors')) {
+                $topParent = $form->ancestors()->last();
+            } else {
+                $topParent = $form->parents()->last();
+            }
+
             $fieldsByFormAttribute = $topParent->filter("input[form=$formId],select[form=$formId],textarea[form=$formId]");
             foreach ($fieldsByFormAttribute as $field) {
                 $fakeForm->appendChild($fakeDom->importNode($field, true));
@@ -1044,7 +1051,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         if (strcasecmp($node->first()->getNode(0)->tagName, 'form') === 0) {
             $form = $node->first();
         } else {
-            $form = $node->parents()->filter('form')->first();
+            // The parents() method is deprecated since symfony/dom-crawler v5.3 (https://github.com/symfony/symfony/pull/39684)
+            if (method_exists($node, 'ancestors')) {
+                $form = $node->ancestors()->filter('form')->first();
+            } else {
+                $form = $node->parents()->filter('form')->first();
+            }
         }
         if (!$form) {
             $this->fail('The selected node is not a form and does not have a form ancestor.');
