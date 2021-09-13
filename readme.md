@@ -17,6 +17,8 @@ Parent library for all Codeception framework modules and PhpBrowser.
 composer require "codeception/lib-innerbrowser" --dev
 ```
 
+[Changelog](https://github.com/Codeception/lib-innerbrowser/releases)
+
 ## License
 
 `Codeception Lib InnerBrowser` is open-sourced software licensed under the [MIT](/LICENSE) License.
