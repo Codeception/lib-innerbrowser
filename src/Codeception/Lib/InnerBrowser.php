@@ -1249,12 +1249,28 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $option;
     }
 
+    /**
+     * @deprecated Use checkCheckbox() instead
+     */
     public function checkOption($option): void
+    {
+        $this->checkCheckbox($option);
+    }
+
+    /**
+     * @deprecated Use uncheckCheckbox() instead
+     */
+    public function uncheckOption($option): void
+    {
+        $this->uncheckCheckbox($option);
+    }
+    
+    public function checkCheckbox($option): void
     {
         $this->proceedCheckOption($option)->tick();
     }
 
-    public function uncheckOption($option): void
+    public function uncheckCheckbox($option): void
     {
         $this->proceedCheckOption($option)->untick();
     }
