@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+use Codeception\Exception\ElementNotFound;
+use Codeception\Exception\MalformedLocatorException;
+use Codeception\Lib\Framework;
+use Codeception\Test\Unit;
+use PHPUnit\Framework\AssertionFailedError;
+
 /**
  * Author: davert
  * Date: 13.01.12
@@ -10,13 +16,12 @@ declare(strict_types=1);
  * Description:
  *
  */
-
-abstract class TestsForWeb extends \Codeception\Test\Unit
+abstract class TestsForWeb extends Unit
 {
     /**
      * @var \Codeception\Module\UniversalFramework
      */
-    protected $module;
+    protected Framework $module;
 
     public function testAmOnPage()
     {
@@ -95,7 +100,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testDontSeeIsCaseInsensitiveForUnicodeText()
     {
-        $this->expectException("PHPUnit\Framework\AssertionFailedError");
+        $this->expectException(AssertionFailedError::class);
         $this->module->amOnPage('/info');
         $this->module->dontSee('ссылочка');
     }
@@ -132,7 +137,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testSeeLinkFailsIfTextDoesNotMatch()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("No links containing text 'Codeception' were found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->seeLink('Codeception');
@@ -140,7 +145,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testSeeLinkFailsIfHrefDoesNotMatch()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("No links containing text 'Next' and URL '/fsdfsdf/' were found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->seeLink('Next', '/fsdfsdf/');
@@ -148,7 +153,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testSeeLinkFailsIfHrefDoesNotMatchExactly()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("No links containing text 'Next' and URL 'http://codeception' were found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->seeLink('Next', 'http://codeception');
@@ -156,7 +161,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testDontSeeLinkFailsIfTextMatches()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("Link containing text 'Next' was found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->dontSeeLink('Next');
@@ -164,7 +169,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testDontSeeLinkFailsIfTextAndUrlMatches()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("Link containing text 'Next' and URL 'http://codeception.com/' was found in page /external_url");
         $this->module->amOnPage('/external_url');
         $this->module->dontSeeLink('Next', 'http://codeception.com/');
@@ -179,7 +184,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
 
     public function testDontSeeLinkMatchesRelativeLink()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage("Link containing text 'Sign in!' and URL '/login' was found in page /info");
         $this->module->amOnPage('/info');
         $this->module->dontSeeLink('Sign in!', '/login');
@@ -204,6 +209,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/button');
         $this->module->click("btn0");
+
         $form = data::get('form');
         $this->assertSame('val', $form['text']);
     }
@@ -231,6 +237,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/checkbox');
         $this->module->checkOption('#checkin');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('agree', $form['terms']);
     }
@@ -240,6 +247,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/checkbox');
         $this->module->checkOption('terms');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('agree', $form['terms']);
     }
@@ -249,6 +257,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/checkbox');
         $this->module->checkOption('I Agree');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('agree', $form['terms']);
     }
@@ -262,6 +271,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/checkbox_array');
         $this->module->checkOption('#id2');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('second', reset($form['field']));
     }
@@ -271,6 +281,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select');
         $this->module->selectOption('form select[name=age]', 'adult');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('adult', $form['age']);
     }
@@ -280,6 +291,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select');
         $this->module->selectOption('age', 'adult');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('adult', $form['age']);
     }
@@ -289,6 +301,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select');
         $this->module->selectOption('Select your age', 'dead');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('dead', $form['age']);
     }
@@ -298,6 +311,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select');
         $this->module->selectOption('Select your age', '21-60');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('adult', $form['age']);
     }
@@ -324,6 +338,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/complex');
         $this->module->seeOptionIsSelected('#age', 'below 13');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('child', $form['age'], 'first option was not submitted');
     }
@@ -336,6 +351,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/example8');
         $this->module->click('form button[value="second"]');
+
         $form = data::get('form');
         $this->assertSame('second', $form['submit']);
     }
@@ -350,6 +366,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/example11');
         $this->module->click('form button[value="fifth"]');
+
         $form = data::get('form');
         $this->assertSame('fifth', $form['submit']);
     }
@@ -359,6 +376,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select_multiple');
         $this->module->selectOption('What do you like the most?', array('Play Video Games', 'Have Sex'));
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame(array('play', 'adult'), $form['like']);
     }
@@ -368,6 +386,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select_multiple');
         $this->module->selectOption('What do you like the most?', array('eat', 'adult'));
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame(array('eat', 'adult'), $form['like']);
     }
@@ -376,6 +395,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/hidden');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('kill_people', $form['action']);
     }
@@ -385,6 +405,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/textarea');
         $this->module->fillField('textarea', 'Nothing special');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('Nothing special', $form['description']);
     }
@@ -394,6 +415,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/textarea');
         $this->module->fillField('Description', 'Nothing special');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('Nothing special', $form['description']);
     }
@@ -403,6 +425,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/field');
         $this->module->fillField('#name', 'Nothing special');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('Nothing special', $form['name']);
     }
@@ -413,6 +436,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('LoginForm[username]', 'davert');
         $this->module->fillField('LoginForm[password]', '123456');
         $this->module->click('Login');
+
         $login = data::get('form');
         $this->assertSame('davert', $login['LoginForm']['username']);
         $this->assertSame('123456', $login['LoginForm']['password']);
@@ -423,6 +447,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/field');
         $this->module->fillField('Name', 'Nothing special');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('Nothing special', $form['name']);
     }
@@ -432,6 +457,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/field');
         $this->module->fillField('Other label', 'Nothing special');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('Nothing special', $form['othername']);
     }
@@ -615,7 +641,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     public function testSeeInFormFieldsFails()
     {
         $this->module->amOnPage('/form/field_values');
-        $this->expectException("PHPUnit\Framework\AssertionFailedError");
+        $this->expectException(AssertionFailedError::class);
         $params = [
             'radio1' => 'something I should not see',
             'checkbox1' => true,
@@ -653,7 +679,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     public function testDontSeeInFormFieldsFails()
     {
         $this->module->amOnPage('/form/field_values');
-        $this->expectException("PHPUnit\Framework\AssertionFailedError");
+        $this->expectException(AssertionFailedError::class);
         $params = [
             'checkbox[]' => [
                 'wont see this anyway',
@@ -730,6 +756,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/bug3866');
         $this->module->fillField('empty', 'new value');
+
         $result = $this->module->grabValueFrom('#empty');
         $this->assertSame('new value', $result);
         $this->module->fillField('empty_textarea', 'new value');
@@ -781,7 +808,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     // regression test. https://github.com/Codeception/Codeception/issues/587
     public function testSeeElementOnPageFails()
     {
-        $this->expectException("PHPUnit\Framework\AssertionFailedError");
+        $this->expectException(AssertionFailedError::class);
         $this->module->amOnPage('/form/field');
         $this->module->dontSeeElement('input[name=name]');
     }
@@ -946,6 +973,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('#LoginForm_password', '123456');
         $this->module->checkOption('#LoginForm_rememberMe');
         $this->module->click('Login');
+
         $login = data::get('form');
         $this->assertSame('davert', $login['LoginForm']['username']);
         $this->assertSame('123456', $login['LoginForm']['password']);
@@ -958,6 +986,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('input[name=username]', 'davert');
         $this->module->fillField('input[name=password]', '123456');
         $this->module->click('Log on');
+
         $login = data::get('form');
         $this->assertSame('davert', $login['username']);
         $this->assertSame('123456', $login['password']);
@@ -1080,6 +1109,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/submitform_ampersands');
         $this->module->submitForm('form', []);
+
         $form = data::get('form');
         $this->assertSame('this & that', $form['test']);
     }
@@ -1088,6 +1118,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/example17');
         $this->module->submitForm('form', []);
+
         $data = data::get('form');
         $this->assertSame('baz', $data['FooBar']['bar']);
         $this->assertArrayNotHasKey('FooBar[bar]', $data);
@@ -1112,6 +1143,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/submitform_multiple');
         $this->module->submitForm('form', []);
+
         $form = data::get('form');
         $this->assertCount(2, $form['select']);
         $this->assertSame('see test one', $form['select'][0]);
@@ -1164,6 +1196,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/textarea');
         $this->module->submitForm('form', []);
+
         $form = data::get('form');
         $this->assertSame('sunrise', $form['description']);
     }
@@ -1186,6 +1219,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select_two_submits');
         $this->module->selectOption('What kind of sandwich would you like?', '2');
         $this->module->click('Save');
+
         $form = data::get('form');
         $this->assertSame('2', $form['sandwich_select']);
     }
@@ -1195,13 +1229,14 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select_two_submits');
         $this->module->selectOption("form select[name='sandwich_select']", '2');
         $this->module->click('Save');
+
         $form = data::get('form');
         $this->assertSame('2', $form['sandwich_select']);
     }
 
     protected function shouldFail()
     {
-        $this->expectException('PHPUnit\Framework\AssertionFailedError');
+        $this->expectException(AssertionFailedError::class);
     }
 
     /**
@@ -1212,6 +1247,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/example10');
         $this->module->seeElement("#button2");
         $this->module->click("#button2");
+
         $form = data::get('form');
         $this->assertArrayHasKey('button2', $form);
         $this->assertArrayHasKey('username', $form);
@@ -1227,6 +1263,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/example10');
         $this->module->fillField("username", "bob");
         $this->module->click("#button2");
+
         $form = data::get('form');
         $this->assertArrayHasKey('button2', $form);
         $this->assertArrayHasKey('username', $form);
@@ -1345,28 +1382,28 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
      */
     public function testWrongXpath()
     {
-        $this->expectException('Codeception\Exception\MalformedLocatorException');
+        $this->expectException(MalformedLocatorException::class);
         $this->module->amOnPage('/');
         $this->module->seeElement('//aas[asd}[sd]a[/[');
     }
 
     public function testWrongCSS()
     {
-        $this->expectException('Codeception\Exception\MalformedLocatorException');
+        $this->expectException(MalformedLocatorException::class);
         $this->module->amOnPage('/');
         $this->module->seeElement('.user#iasos<here');
     }
 
     public function testWrongStrictCSSLocator()
     {
-        $this->expectException('Codeception\Exception\MalformedLocatorException');
+        $this->expectException(MalformedLocatorException::class);
         $this->module->amOnPage('/');
         $this->module->seeElement(['css' => 'hel!1$<world']);
     }
 
     public function testWrongStrictXPathLocator()
     {
-        $this->expectException('Codeception\Exception\MalformedLocatorException');
+        $this->expectException(MalformedLocatorException::class);
         $this->module->amOnPage('/');
         $this->module->seeElement(['xpath' => 'hello<wo>rld']);
     }
@@ -1406,6 +1443,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('description', 'description');
         $this->module->fillField('price', '19.99');
         $this->module->click('Create');
+
         $data = data::get('form');
         $this->assertSame('Special Widget', $data['title']);
     }
@@ -1418,6 +1456,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/bug1535');
         $this->module->checkOption('#bmessage-topicslinks input[value="4"]');
         $this->module->click('Submit');
+
         $data = data::get('form');
         $this->assertContains('4', $data['BMessage']['topicsLinks']);
     }
@@ -1434,6 +1473,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('input[name="users[]"]', 'davert');
         $this->module->attachFile('input[name="files[]"]', 'app/avatar.jpg');
         $this->module->click('Submit');
+
         $data = data::get('form');
         $this->assertContains('test3', $data['items'][1]);
         $this->assertContains('test2', $data['captions']);
@@ -1444,6 +1484,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amOnPage('/form/submit_adjacentforms');
         $this->module->submitForm('#form-2', []);
+
         $data = data::get('form');
         $this->assertArrayHasKey('second-field', $data);
         $this->assertArrayNotHasKey('first-field', $data);
@@ -1456,6 +1497,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('first-field', 'First');
         $this->module->fillField('second-field', 'Second');
         $this->module->click('#submit1');
+
         $data = data::get('form');
         $this->assertArrayHasKey('first-field', $data);
         $this->assertArrayNotHasKey('second-field', $data);
@@ -1465,6 +1507,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->fillField('first-field', 'First');
         $this->module->fillField('second-field', 'Second');
         $this->module->click('#submit2');
+
         $data = data::get('form');
         $this->assertArrayNotHasKey('first-field', $data);
         $this->assertArrayHasKey('second-field', $data);
@@ -1520,6 +1563,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/field');
         $this->module->fillField('Name', 'this & that');
         $this->module->click('Submit');
+
         $form = data::get('form');
         $this->assertSame('this & that', $form['name']);
     }
@@ -1538,21 +1582,21 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->see('Is that interesting?');
         $this->module->click('Ссылочка');
     }
-    
+
     public function testGrabMultiple()
     {
         $this->module->amOnPage('/info');
-        
+
         $arr = $this->module->grabMultiple('#grab-multiple a:first-child');
         $this->assertCount(1, $arr);
         $this->assertSame('First', $arr[0]);
-        
+
         $arr = $this->module->grabMultiple('#grab-multiple a');
         $this->assertCount(3, $arr);
         $this->assertSame('First', $arr[0]);
         $this->assertSame('Second', $arr[1]);
         $this->assertSame('Third', $arr[2]);
-        
+
         // href for WebDriver with selenium returns a full link, so testing with ID
         $arr = $this->module->grabMultiple('#grab-multiple a', 'id');
         $this->assertCount(3, $arr);
@@ -1576,7 +1620,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
      */
     public function testClickThrowsElementNotFoundExceptionWhenTextContainsNumber()
     {
-        $this->expectException('Codeception\Exception\ElementNotFound');
+        $this->expectException(ElementNotFound::class);
         $this->expectExceptionMessage("'Link 2' is invalid CSS and XPath selector and Link or Button element with 'name=Link 2' was not found.");
         $this->module->amOnPage('/info');
         $this->module->click('Link 2');
@@ -1594,6 +1638,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/select_selectors');
         $this->module->selectOption('age', ['value' => '20']);
         $this->module->click('Submit');
+
         $data = data::get('form');
         $this->assertSame('20', $data['age']);
     }
@@ -1745,7 +1790,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $filename = 'does-not-exist.jpg';
         $expectedMessage = 'File does not exist: ' . codecept_data_dir($filename);
-        $this->expectException('InvalidArgumentException');
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage($expectedMessage);
 
         $this->module->amOnPage('/form/file');
@@ -1757,6 +1802,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/password_argument');
         $this->module->fillField('password', new \Codeception\Step\Argument\PasswordArgument('thisissecret'));
         $this->module->click('Submit');
+
         $data = data::get('form');
         $this->assertSame('thisissecret', $data['password']);
     }
@@ -1766,11 +1812,13 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->amHttpAuthenticated('user', 'pass');
         $this->module->amOnPage('/');
+
         $server = $this->module->client->getRequest()->getServer();
         $this->assertArrayHasKey('PHP_AUTH_USER', $server);
         $this->assertArrayHasKey('PHP_AUTH_PW', $server);
         $this->module->setServerParameters([]);
         $this->module->amOnPage('/');
+
         $server = $this->module->client->getRequest()->getServer();
         $this->assertArrayNotHasKey('PHP_AUTH_USER', $server);
         $this->assertArrayNotHasKey('PHP_AUTH_PW', $server);
@@ -1780,6 +1828,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
     {
         $this->module->haveServerParameter('my', 'param');
         $this->module->amOnPage('/');
+
         $server = $this->module->client->getRequest()->getServer();
         $this->assertArrayHasKey('my', $server);
     }
@@ -1789,6 +1838,7 @@ abstract class TestsForWeb extends \Codeception\Test\Unit
         $this->module->amOnPage('/form/uncheck_hidden');
         $this->module->uncheckOption('#coffee-id');
         $this->module->click("Submit Preference");
+
         $form = data::get('form');
         $this->assertSame('0', $form['coffee']);
 

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-final class CrawlerNotConstraintTest extends \Codeception\PHPUnit\TestCase
-{
+use Codeception\PHPUnit\Constraint\CrawlerNot;
+use Codeception\PHPUnit\TestCase;
+use PHPUnit\Framework\AssertionFailedError;
 
-    /**
-     * @var Codeception\PHPUnit\Constraint\Crawler
-     */
-    protected $constraint;
+final class CrawlerNotConstraintTest extends TestCase
+{
+    protected ?CrawlerNot $constraint = null;
 
     public function _setUp()
     {
@@ -26,30 +26,33 @@ final class CrawlerNotConstraintTest extends \Codeception\PHPUnit\TestCase
         $nodes = new Symfony\Component\DomCrawler\Crawler('<p>Bye world</p><p>Bye warcraft</p>');
         try {
             $this->constraint->evaluate($nodes->filter('p'), 'selector');
-        } catch (\PHPUnit\Framework\AssertionFailedError $fail) {
+        } catch (AssertionFailedError $fail) {
             $this->assertStringContainsString("There was 'selector' element on page /user", $fail->getMessage());
             $this->assertStringNotContainsString('+ <p>Bye world</p>', $fail->getMessage());
             $this->assertStringContainsString('+ <p>Bye warcraft</p>', $fail->getMessage());
             return;
         }
+
         $this->fail("should have failed, but not");
     }
 
     public function testFailMessageResponseWhenMoreNodes()
     {
         $html = '';
-        for ($i = 0; $i < 15; $i++) {
-            $html .= "<p>warcraft $i</p>";
+        for ($i = 0; $i < 15; ++$i) {
+            $html .= "<p>warcraft {$i}</p>";
         }
+
         $nodes = new Symfony\Component\DomCrawler\Crawler($html);
         try {
             $this->constraint->evaluate($nodes->filter('p'), 'selector');
-        } catch (\PHPUnit\Framework\AssertionFailedError $fail) {
+        } catch (AssertionFailedError $fail) {
             $this->assertStringContainsString("There was 'selector' element on page /user", $fail->getMessage());
             $this->assertStringContainsString('+ <p>warcraft 0</p>', $fail->getMessage());
             $this->assertStringContainsString('+ <p>warcraft 14</p>', $fail->getMessage());
             return;
         }
+
         $this->fail("should have failed, but not");
     }
 
@@ -59,11 +62,12 @@ final class CrawlerNotConstraintTest extends \Codeception\PHPUnit\TestCase
         $nodes = new Symfony\Component\DomCrawler\Crawler('<p>Bye world</p><p>Bye warcraft</p>');
         try {
             $this->constraint->evaluate($nodes->filter('p'), 'selector');
-        } catch (\PHPUnit\Framework\AssertionFailedError $fail) {
+        } catch (AssertionFailedError $fail) {
             $this->assertStringContainsString("There was 'selector' element", $fail->getMessage());
             $this->assertStringNotContainsString("There was 'selector' element on page /user", $fail->getMessage());
             return;
         }
+
         $this->fail("should have failed, but not");
     }
 }
