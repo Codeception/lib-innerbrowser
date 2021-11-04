@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Codeception\Util;
 
-final class HttpCodeTest extends \Codeception\Test\Unit
+use Codeception\Test\Unit;
+
+final class HttpCodeTest extends Unit
 {
     public function testHttpCodeConstants()
     {
