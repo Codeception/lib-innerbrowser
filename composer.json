@@ -1,45 +1,45 @@
 {
-	"name": "codeception/lib-innerbrowser",
-	"description": "Parent library for all Codeception framework modules and PhpBrowser",
-	"keywords": [ "codeception" ],
-	"homepage": "https://codeception.com/",
-	"type": "library",
-	"license": "MIT",
-	"authors": [
-		{
-			"name": "Michael Bodnarchuk",
-			"email": "davert@mail.ua",
-			"homepage": "https://codegyre.com"
-		},
-		{
-			"name": "Gintautas Miselis"
-		}
-	],
-	"minimum-stability": "RC",
-	"require": {
-		"php": "^7.4 || ^8.0",
-		"ext-dom": "*",
-		"ext-json": "*",
-		"ext-mbstring": "*",
-		"codeception/codeception": "^5.0 || *@dev",
-		"symfony/browser-kit": ">=4.4 <6.0",
-		"symfony/dom-crawler": ">=4.4 <6.0"
-	},
-	"require-dev": {
-		"codeception/util-universalframework": "dev-master"
-	},
-	"conflict": {
-		"codeception/codeception": "<5.0"
-	},
-	"autoload": {
-		"classmap": [
-			"src/"
-		]
-	},
-	"config": {
-		"classmap-authoritative": true
-	},
-	"scripts": {
-		"test": "codecept run --coverage-xml"
-	}
+    "name": "codeception/lib-innerbrowser",
+    "description": "Parent library for all Codeception framework modules and PhpBrowser",
+    "keywords": [ "codeception" ],
+    "homepage": "https://codeception.com/",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Michael Bodnarchuk",
+            "email": "davert@mail.ua",
+            "homepage": "https://codegyre.com"
+        },
+        {
+            "name": "Gintautas Miselis"
+        }
+    ],
+    "minimum-stability": "RC",
+    "require": {
+        "php": "^7.4 | ^8.0",
+        "ext-dom": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "codeception/codeception": "^4.0 | 4.*@dev",
+        "symfony/browser-kit": ">=4.4 <6.0",
+        "symfony/dom-crawler": ">=4.4 <6.0"
+    },
+    "require-dev": {
+        "codeception/util-universalframework": "dev-master"
+    },
+    "conflict": {
+        "codeception/codeception": "<4.0"
+    },
+    "autoload": {
+        "classmap": [
+            "src/"
+        ]
+    },
+    "config": {
+        "classmap-authoritative": true
+    },
+    "scripts": {
+        "test": "codecept run --coverage-xml"
+    }
 }

@@ -24,9 +24,7 @@ use Codeception\Util\Locator;
 use Codeception\Util\ReflectionHelper;
 use Codeception\Util\Uri;
 use DOMDocument;
-use DOMElement;
 use DOMNode;
-use Exception;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\BrowserKit\AbstractBrowser;
@@ -49,7 +47,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * @api
      */
-    public AbstractBrowser $client;
+    public ?AbstractBrowser $client = null;
 
     /**
      * @var SymfonyForm[]
@@ -73,7 +71,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     private ?string $baseUrl = null;
 
-    public function _failed(TestInterface $test, Exception $fail): void
+    public function _failed(TestInterface $test, $fail)
     {
         try {
             if (!$this->client || !$this->client->getInternalResponse()) {
@@ -110,7 +108,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $test->getMetadata()->addReport('response', $report);
     }
 
-    public function _after(TestInterface $test): void
+    public function _after(TestInterface $test)
     {
         $this->client = null;
         $this->crawler = null;
@@ -121,12 +119,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * @return class-string
      */
-    public function _conflicts(): string
+    public function _conflicts()
     {
         return \Codeception\Lib\Interfaces\Web::class;
     }
 
-    public function _findElements(array $locator): SymfonyCrawler
+    public function _findElements($locator)
     {
         return $this->match($locator);
     }
@@ -321,7 +319,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $this->client;
     }
 
-    public function _savePageSource(string $filename): void
+    public function _savePageSource($filename)
     {
         file_put_contents($filename, $this->_getResponseContent());
     }
@@ -388,12 +386,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         unset($this->headers[$name]);
     }
 
-    public function amOnPage(string $page): void
+    public function amOnPage($page)
     {
         $this->_loadPage('GET', $page);
     }
 
-    public function click($link, $context = null): void
+    public function click($link, $context = null)
     {
         if ($context) {
             $this->crawler = $this->match($context);
@@ -532,7 +530,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $this->getAbsoluteUrlFor($baseUrl);
     }
 
-    public function see(string $text, $selector = null): void
+    public function see($text, $selector = null)
     {
         if (!$selector) {
             $this->assertPageContains($text);
@@ -543,7 +541,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertDomContains($nodes, $this->stringifySelector($selector), $text);
     }
 
-    public function dontSee(string $text, $selector = null): void
+    public function dontSee($text, $selector = null)
     {
         if (!$selector) {
             $this->assertPageNotContains($text);
@@ -554,17 +552,17 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertDomNotContains($nodes, $this->stringifySelector($selector), $text);
     }
 
-    public function seeInSource(string $raw): void
+    public function seeInSource($raw)
     {
         $this->assertPageSourceContains($raw);
     }
 
-    public function dontSeeInSource(string $raw): void
+    public function dontSeeInSource($raw)
     {
         $this->assertPageSourceNotContains($raw);
     }
 
-    public function seeLink(string $text, string $url = null): void
+    public function seeLink($text, $url = null)
     {
         $crawler = $this->getCrawler()->selectLink($text);
         if ($crawler->count() === 0) {
@@ -581,7 +579,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertTrue(true);
     }
 
-    public function dontSeeLink(string $text, string $url = null): void
+    public function dontSeeLink($text, $url = null)
     {
         $crawler = $this->getCrawler()->selectLink($text);
         if (!$url && $crawler->count() > 0) {
@@ -605,37 +603,37 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return Uri::retrieveUri($this->getRunningClient()->getHistory()->current()->getUri());
     }
 
-    public function seeInCurrentUrl(string $uri): void
+    public function seeInCurrentUrl($uri)
     {
         $this->assertStringContainsString($uri, $this->_getCurrentUri());
     }
 
-    public function dontSeeInCurrentUrl(string $uri): void
+    public function dontSeeInCurrentUrl($uri)
     {
         $this->assertStringNotContainsString($uri, $this->_getCurrentUri());
     }
 
-    public function seeCurrentUrlEquals(string $uri): void
+    public function seeCurrentUrlEquals($uri)
     {
         $this->assertSame(rtrim($uri, '/'), rtrim($this->_getCurrentUri(), '/'));
     }
 
-    public function dontSeeCurrentUrlEquals(string $uri): void
+    public function dontSeeCurrentUrlEquals($uri)
     {
         $this->assertNotSame(rtrim($uri, '/'), rtrim($this->_getCurrentUri(), '/'));
     }
 
-    public function seeCurrentUrlMatches(string $uri): void
+    public function seeCurrentUrlMatches($uri)
     {
         $this->assertRegExp($uri, $this->_getCurrentUri());
     }
 
-    public function dontSeeCurrentUrlMatches(string $uri): void
+    public function dontSeeCurrentUrlMatches($uri)
     {
         $this->assertNotRegExp($uri, $this->_getCurrentUri());
     }
 
-    public function grabFromCurrentUrl(string $uri = null)
+    public function grabFromCurrentUrl($uri = null)
     {
         if (!$uri) {
             return $this->_getCurrentUri();
@@ -654,36 +652,36 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $matches[1];
     }
 
-    public function seeCheckboxIsChecked($checkbox): void
+    public function seeCheckboxIsChecked($checkbox)
     {
         $checkboxes = $this->getFieldsByLabelOrCss($checkbox);
         $this->assertDomContains($checkboxes->filter('input[checked=checked]'), 'checkbox');
     }
 
-    public function dontSeeCheckboxIsChecked($checkbox): void
+    public function dontSeeCheckboxIsChecked($checkbox)
     {
         $checkboxes = $this->getFieldsByLabelOrCss($checkbox);
         $this->assertSame(0, $checkboxes->filter('input[checked=checked]')->count());
     }
 
-    public function seeInField($field, $value): void
+    public function seeInField($field, $value)
     {
         $nodes = $this->getFieldsByLabelOrCss($field);
         $this->assert($this->proceedSeeInField($nodes, $value));
     }
 
-    public function dontSeeInField($field, $value): void
+    public function dontSeeInField($field, $value)
     {
         $nodes = $this->getFieldsByLabelOrCss($field);
         $this->assertNot($this->proceedSeeInField($nodes, $value));
     }
 
-    public function seeInFormFields($formSelector, array $params): void
+    public function seeInFormFields($formSelector, array $params)
     {
         $this->proceedSeeInFormFields($formSelector, $params, false);
     }
 
-    public function dontSeeInFormFields($formSelector, array $params): void
+    public function dontSeeInFormFields($formSelector, array $params)
     {
         $this->proceedSeeInFormFields($formSelector, $params, true);
     }
@@ -946,7 +944,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->forms = [];
     }
 
-    public function submitForm($selector, array $params, $button = null): void
+    public function submitForm($selector, array $params, $button = null)
     {
         $form = $this->match($selector)->first();
         if (count($form) === 0) {
@@ -1109,7 +1107,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $values;
     }
 
-    public function fillField($field, $value): void
+    public function fillField($field, $value)
     {
         $value = (string) $value;
         $input = $this->getFieldByLabelOrCss($field);
@@ -1173,7 +1171,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $input->first();
     }
 
-    public function selectOption($select, $option): void
+    public function selectOption($select, $option)
     {
         $field = $this->getFieldByLabelOrCss($select);
         $form = $this->getFormFor($field);
@@ -1250,12 +1248,12 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $option;
     }
 
-    public function checkOption($option): void
+    public function checkOption($option)
     {
         $this->proceedCheckOption($option)->tick();
     }
 
-    public function uncheckOption($option): void
+    public function uncheckOption($option)
     {
         $this->proceedCheckOption($option)->untick();
     }
@@ -1282,7 +1280,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $formField;
     }
 
-    public function attachFile($field, string $filename): void
+    public function attachFile($field, $filename)
     {
         $form = $this->getFormFor($field = $this->getFieldByLabelOrCss($field));
         $filePath = codecept_data_dir() . $filename;
@@ -1362,7 +1360,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->debugSection('Response Headers', $this->getRunningClient()->getInternalResponse()->getHeaders());
     }
 
-    public function makeHtmlSnapshot(string $name = null): void
+    public function makeHtmlSnapshot($name = null)
     {
         if (empty($name)) {
             $name = uniqid(date("Y-m-d_H-i-s_"), true);
@@ -1472,7 +1470,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         throw new ElementNotFound($cssOrXPathOrRegex, 'Element that matches CSS or XPath or Regex');
     }
 
-    public function grabAttributeFrom($cssOrXpath, string $attribute): ?string
+    public function grabAttributeFrom($cssOrXpath, $attribute)
     {
         $nodes = $this->match($cssOrXpath);
         if ($nodes->count() === 0) {
@@ -1482,7 +1480,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $nodes->first()->attr($attribute);
     }
 
-    public function grabMultiple($cssOrXpath, string $attribute = null): array
+    public function grabMultiple($cssOrXpath, $attribute = null)
     {
         $result = [];
         $nodes = $this->match($cssOrXpath);
@@ -1529,7 +1527,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->fail("Element {$nodes} is not a form field or does not contain a form field");
     }
 
-    public function setCookie(string $name, ?string $val, array $params = []): void
+    public function setCookie($name, $val, $params = [])
     {
         $cookies = $this->client->getCookieJar();
         $params = array_merge($this->defaultCookieParameters, $params);
@@ -1549,7 +1547,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->debugCookieJar();
     }
 
-    public function grabCookie(string $cookie, array $params = [])
+    public function grabCookie($cookie, $params = [])
     {
         $params = array_merge($this->defaultCookieParameters, $params);
         $this->debugCookieJar();
@@ -1567,26 +1565,26 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * @throws ModuleException if no page was opened.
      * @return string Current page source code.
      */
-    public function grabPageSource(): string
+    public function grabPageSource()
     {
         return $this->_getResponseContent();
     }
 
-    public function seeCookie(string $cookie, array $params = []): void
+    public function seeCookie($cookie, $params = [])
     {
         $params = array_merge($this->defaultCookieParameters, $params);
         $this->debugCookieJar();
         $this->assertNotNull($this->client->getCookieJar()->get($cookie, $params['path'], $params['domain']));
     }
 
-    public function dontSeeCookie(string $cookie, array $params = []): void
+    public function dontSeeCookie($cookie, $params = [])
     {
         $params = array_merge($this->defaultCookieParameters, $params);
         $this->debugCookieJar();
         $this->assertNull($this->client->getCookieJar()->get($cookie, $params['path'], $params['domain']));
     }
 
-    public function resetCookie(string $cookie, array $params = []): void
+    public function resetCookie($cookie, $params = [])
     {
         $params = array_merge($this->defaultCookieParameters, $params);
         $this->client->getCookieJar()->expire($cookie, $params['path'], $params['domain']);
@@ -1602,7 +1600,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $selector;
     }
 
-    public function seeElement($selector, array $attributes = []): void
+    public function seeElement($selector, $attributes = [])
     {
         $nodes = $this->match($selector);
         $selector = $this->stringifySelector($selector);
@@ -1614,7 +1612,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertDomContains($nodes, $selector);
     }
 
-    public function dontSeeElement($selector, array $attributes = []): void
+    public function dontSeeElement($selector, $attributes = [])
     {
         $nodes = $this->match($selector);
         $selector = $this->stringifySelector($selector);
@@ -1644,7 +1642,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
     }
 
-    public function seeOptionIsSelected($selector, string $optionText): void
+    public function seeOptionIsSelected($selector, $optionText)
     {
         $selected = $this->matchSelectedOption($selector);
         $this->assertDomContains($selected, 'selected option');
@@ -1655,7 +1653,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertSame($optionText, $value);
     }
 
-    public function dontSeeOptionIsSelected($selector, string $optionText): void
+    public function dontSeeOptionIsSelected($selector, $optionText)
     {
         $selected = $this->matchSelectedOption($selector);
         if ($selected->count() === 0) {
@@ -1777,7 +1775,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->seeResponseCodeIsBetween(500, 599);
     }
 
-    public function seeInTitle(string $title)
+    public function seeInTitle($title)
     {
         $nodes = $this->getCrawler()->filter('title');
         if ($nodes->count() === 0) {
@@ -1787,7 +1785,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertStringContainsString($title, $nodes->first()->text(), "page title contains {$title}");
     }
 
-    public function dontSeeInTitle(string $title): void
+    public function dontSeeInTitle($title)
     {
         $nodes = $this->getCrawler()->filter('title');
         if ($nodes->count() === 0) {
