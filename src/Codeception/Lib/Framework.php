@@ -19,7 +19,7 @@ abstract class Framework extends InnerBrowser
         return [];
     }
 
-    public function _beforeSuite(array $settings = []): void
+    public function _beforeSuite($settings = [])
     {
         /**
          * reset internal domains before suite, because each suite can have a different configuration
