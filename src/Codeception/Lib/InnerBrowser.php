@@ -1216,8 +1216,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
 
     /**
      * @param string|array $option
+     * @return mixed
      */
-    protected function matchOption(Crawler $field, $option): string
+    protected function matchOption(Crawler $field, $option)
     {
         if (isset($option['value'])) {
             return $option['value'];
