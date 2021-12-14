@@ -97,7 +97,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             $internalResponse = false;
         }
 
-        $responseContentType = $internalResponse ? $internalResponse->getHeader('content-type') : '';
+        $responseContentType = $internalResponse ? $internalResponse->getHeader('content-type') ?? '': '';
         [$responseMimeType] = explode(';', $responseContentType);
 
         $extension = $extensions[$responseMimeType] ?? 'html';
