@@ -1013,7 +1013,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $formId = $form->attr('id');
         if ($formId !== null) {
             $fakeForm = $fakeDom->firstChild;
-            $topParent = $form->ancestors()->last();
+            $topParent = $this->getAncestorsFor($form)->last();
             $fieldsByFormAttribute = $topParent->filter(
                 sprintf('input[form=%s],select[form=%s],textarea[form=%s]', $formId, $formId, $formId)
             );
@@ -1044,7 +1044,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         if (strcasecmp($node->first()->getNode(0)->tagName, 'form') === 0) {
             $form = $node->first();
         } else {
-            $form = $node->ancestors()->filter('form')->first();
+            $form = $this->getAncestorsFor($node)->filter('form')->first();
         }
 
         if (!$form) {
@@ -1057,6 +1057,24 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
 
         return $this->forms[$identifier];
+    }
+
+    /**
+     * Returns the ancestors of the passed SymfonyCrawler.
+     *
+     * symfony/dom-crawler deprecated parents() in favor of ancestors()
+     * This provides backward compatibility with < 5.3.0-BETA-1
+     *
+     * @param SymfonyCrawler $crawler the crawler
+     * @return SymfonyCrawler the ancestors
+     */
+    private function getAncestorsFor(SymfonyCrawler $crawler): SymfonyCrawler
+    {
+        if (method_exists($crawler, 'ancestors')) {
+            return $crawler->ancestors();
+        }
+
+        return $crawler->parents();
     }
 
     /**
