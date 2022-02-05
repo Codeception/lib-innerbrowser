@@ -15,13 +15,13 @@
             "name": "Gintautas Miselis"
         }
     ],
-    "minimum-stability": "RC",
+    "minimum-stability": "dev",
     "require": {
-        "php": "^7.4 | ^8.0",
+        "php": "^8.0",
         "ext-dom": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "codeception/codeception": "^4.1 | 4.*@dev",
+        "codeception/codeception": "^5.0.0-alpha1",
         "symfony/browser-kit": "^4.4 | ^5.4 | ^6.0",
         "symfony/dom-crawler": "^4.4 | ^5.4 | ^6.0"
     },
@@ -29,7 +29,7 @@
         "codeception/util-universalframework": "dev-master"
     },
     "conflict": {
-        "codeception/codeception": "<4.1"
+        "codeception/codeception": "<5.0"
     },
     "autoload": {
         "classmap": [
