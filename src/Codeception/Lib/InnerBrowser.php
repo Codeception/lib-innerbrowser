@@ -124,7 +124,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return \Codeception\Lib\Interfaces\Web::class;
     }
 
-    public function _findElements($locator)
+    public function _findElements(mixed $locator): iterable
     {
         return $this->match($locator);
     }
@@ -633,7 +633,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertNotRegExp($uri, $this->_getCurrentUri());
     }
 
-    public function grabFromCurrentUrl($uri = null)
+    public function grabFromCurrentUrl(string $uri = null): mixed
     {
         if (!$uri) {
             return $this->_getCurrentUri();
@@ -1475,7 +1475,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $nodes;
     }
 
-    public function grabTextFrom($cssOrXPathOrRegex)
+    public function grabTextFrom($cssOrXPathOrRegex): mixed
     {
         if (is_string($cssOrXPathOrRegex) && @preg_match($cssOrXPathOrRegex, $this->client->getInternalResponse()->getContent(), $matches)) {
             return $matches[1];
@@ -1489,7 +1489,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         throw new ElementNotFound($cssOrXPathOrRegex, 'Element that matches CSS or XPath or Regex');
     }
 
-    public function grabAttributeFrom($cssOrXpath, $attribute)
+    public function grabAttributeFrom($cssOrXpath, string $attribute): mixed
     {
         $nodes = $this->match($cssOrXpath);
         if ($nodes->count() === 0) {
@@ -1511,7 +1511,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $result;
     }
 
-    public function grabValueFrom($field)
+    public function grabValueFrom($field): mixed
     {
         $nodes = $this->match($field);
         if ($nodes->count() === 0) {
@@ -1566,7 +1566,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->debugCookieJar();
     }
 
-    public function grabCookie($cookie, $params = [])
+    public function grabCookie(string $cookie, array $params = []): mixed
     {
         $params = array_merge($this->defaultCookieParameters, $params);
         $this->debugCookieJar();
