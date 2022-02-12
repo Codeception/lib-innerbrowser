@@ -92,7 +92,7 @@ final class FrameworksTest extends TestsForWeb
     public function testCreateSnapshotOnFail()
     {
         $container = Stub::make(ModuleContainer::class);
-        $module = Stub::construct(get_class($this->module), [$container], [
+        $module = Stub::construct($this->module::class, [$container], [
             '_savePageSource' => Stub\Expected::once(function ($filename) {
                 $this->assertSame(codecept_log_dir('Codeception.Module.UniversalFramework.looks.like..test.fail.html'), $filename);
             }),

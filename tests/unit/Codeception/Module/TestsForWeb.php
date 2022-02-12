@@ -1542,12 +1542,12 @@ abstract class TestsForWeb extends Unit
         $this->module->selectOption('//input[@name="input_radio_name"]', '1');
         $this->module->selectOption('//input[@name="input_radio_name"]', '2');
 
-        $this->module->checkOption('//input[@name="input_checkbox_name"]', '1');
-        $this->module->checkOption('//input[@name="input_checkbox_name"]', '2');
+        $this->module->checkOption('//input[@name="input_checkbox_name"]');
+        $this->module->checkOption('//input[@name="input_checkbox_name"]');
 
-        $this->module->checkOption('//input[@name="input[checkbox][name][]"]', '1');
-        $this->module->checkOption('//input[@name="input[checkbox][name][]"]', '2');
-        $this->module->checkOption('//input[@name="input[checkbox][name][]"]', '1');
+        $this->module->checkOption('//input[@name="input[checkbox][name][]"]');
+        $this->module->checkOption('//input[@name="input[checkbox][name][]"]');
+        $this->module->checkOption('//input[@name="input[checkbox][name][]"]');
 
         $this->module->selectOption('//select[@name="select_name"]', '1');
 
