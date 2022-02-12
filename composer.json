@@ -1,10 +1,11 @@
 {
     "name": "codeception/lib-innerbrowser",
     "description": "Parent library for all Codeception framework modules and PhpBrowser",
-    "keywords": [ "codeception" ],
-    "homepage": "https://codeception.com/",
-    "type": "library",
     "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "codeception"
+    ],
     "authors": [
         {
             "name": "Michael Bodnarchuk",
@@ -15,15 +16,15 @@
             "name": "Gintautas Miselis"
         }
     ],
-    "minimum-stability": "dev",
+    "homepage": "https://codeception.com/",
     "require": {
         "php": "^8.0",
         "ext-dom": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "codeception/codeception": "^5.0.0-alpha1",
-        "symfony/browser-kit": "^4.4 | ^5.4 | ^6.0",
-        "symfony/dom-crawler": "^4.4 | ^5.4 | ^6.0"
+        "codeception/codeception": "dev-5.0-interfaces as 5.0.0",
+        "symfony/browser-kit": "^4.4 || ^5.4 || ^6.0",
+        "symfony/dom-crawler": "^4.4 || ^5.4 || ^6.0"
     },
     "require-dev": {
         "codeception/util-universalframework": "dev-master"
@@ -31,13 +32,15 @@
     "conflict": {
         "codeception/codeception": "<5.0"
     },
+    "minimum-stability": "dev",
     "autoload": {
         "classmap": [
             "src/"
         ]
     },
     "config": {
-        "classmap-authoritative": true
+        "classmap-authoritative": true,
+        "sort-packages": true
     },
     "scripts": {
         "test": "codecept run --coverage-xml"
