@@ -22,7 +22,7 @@
         "ext-dom": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "codeception/codeception": "dev-5.0-interfaces as 5.0.0",
+        "codeception/codeception": "*@dev",
         "symfony/browser-kit": "^4.4 || ^5.4 || ^6.0",
         "symfony/dom-crawler": "^4.4 || ^5.4 || ^6.0"
     },
