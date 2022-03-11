@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Codeception\Lib;
 
+use Codeception\Constraint\Crawler as CrawlerConstraint;
+use Codeception\Constraint\CrawlerNot as CrawlerNotConstraint;
+use Codeception\Constraint\Page as PageConstraint;
 use Codeception\Exception\ElementNotFound;
 use Codeception\Exception\ExternalUrlException;
 use Codeception\Exception\MalformedLocatorException;
@@ -14,9 +17,6 @@ use Codeception\Lib\Interfaces\ElementLocator;
 use Codeception\Lib\Interfaces\PageSourceSaver;
 use Codeception\Lib\Interfaces\Web;
 use Codeception\Module;
-use Codeception\PHPUnit\Constraint\Crawler as CrawlerConstraint;
-use Codeception\PHPUnit\Constraint\CrawlerNot as CrawlerNotConstraint;
-use Codeception\PHPUnit\Constraint\Page as PageConstraint;
 use Codeception\Test\Descriptor;
 use Codeception\TestInterface;
 use Codeception\Util\HttpCode;

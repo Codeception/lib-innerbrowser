@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Codeception\PHPUnit\Constraint;
+namespace Codeception\Constraint;
 
 use PHPUnit\Framework\ExpectationFailedException;
 use SebastianBergmann\Comparator\ComparisonFailure;
