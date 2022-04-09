@@ -484,6 +484,7 @@ abstract class TestsForWeb extends Unit
     {
         $this->module->amOnPage('/form/checkbox');
         $this->module->dontSeeCheckboxIsChecked('#checkin');
+        $this->module->dontSeeCheckboxIsChecked(['css' => '#checkin']);
         $this->module->dontSeeCheckboxIsChecked('I Agree');
     }
 
@@ -491,6 +492,7 @@ abstract class TestsForWeb extends Unit
     {
         $this->module->amOnPage('/info');
         $this->module->seeCheckboxIsChecked('input[type=checkbox]');
+        $this->module->seeCheckboxIsChecked(['css' => 'input[type=checkbox]']);
         $this->module->seeCheckboxIsChecked('Checked');
     }
 
