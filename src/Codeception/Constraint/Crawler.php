@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Codeception\Constraint;
 
 use Codeception\Exception\ElementNotFound;
-use Codeception\Lib\Console\Message;
 use DOMElement;
 use PHPUnit\Framework\ExpectationFailedException;
 use SebastianBergmann\Comparator\ComparisonFailure;
 use Symfony\Component\DomCrawler\Crawler as SymfonyDomCrawler;
 
+use function rtrim;
+use function sprintf;
 use function strpos;
 
 class Crawler extends Page
@@ -47,15 +48,13 @@ class Crawler extends Page
             throw new ElementNotFound($selector, 'Element located either by name, CSS or XPath');
         }
 
-        $output = "Failed asserting that any element by '{$selector}'";
+        $output = "Failed asserting that any element by '{$selector}' ";
         $output .= $this->uriMessage('on page');
-        $output .= " ";
 
         if ($nodes->count() < 10) {
             $output .= $this->nodesList($nodes);
         } else {
-            $message = new Message("[total %s elements]");
-            $output .= $message->with($nodes->count())->getMessage();
+            $output = sprintf('%s [total %d elements]', rtrim($output, ' '), $nodes->count());
         }
         $output .= "\ncontains text '{$this->string}'";
 
