@@ -24,7 +24,7 @@ class CrawlerNot extends Crawler
      * @param string $selector
      * @param ComparisonFailure|null $comparisonFailure
      */
-    protected function fail($nodes, $selector, ComparisonFailure $comparisonFailure = null): void
+    protected function fail($nodes, $selector, ComparisonFailure $comparisonFailure = null): never
     {
         if (!$this->string) {
             throw new ExpectationFailedException(
