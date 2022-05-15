@@ -1241,7 +1241,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             $option = $option['text'];
         }
 
-        $options = $field->filterXPath(sprintf('//option[text()=normalize-space("%s")]|//input[@type="radio" and @value=normalize-space("%s")]', $option, $option));
+        $options = $field->filterXPath(sprintf('//option[normalize-space(text())=normalize-space("%s")]|//input[@type="radio" and @value=normalize-space("%s")]', $option, $option));
         if ($options->count() !== 0) {
             $firstMatchingDomNode = $options->getNode(0);
             if ($firstMatchingDomNode->tagName === 'option') {
