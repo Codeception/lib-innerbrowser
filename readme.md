@@ -9,7 +9,7 @@ Parent library for all Codeception framework modules and PhpBrowser.
 
 ## Requirements
 
-* `PHP 7.4` or higher.
+* `PHP 8.0` or higher.
 
 ## Installation
 
