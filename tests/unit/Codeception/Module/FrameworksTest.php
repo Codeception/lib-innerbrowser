@@ -94,13 +94,13 @@ final class FrameworksTest extends TestsForWeb
         $container = Stub::make(ModuleContainer::class);
         $module = Stub::construct($this->module::class, [$container], [
             '_savePageSource' => Stub\Expected::once(function ($filename) {
-                $this->assertSame(codecept_log_dir('Codeception.Module.UniversalFramework.looks.like..test.fail.html'), $filename);
+                $this->assertSame(codecept_log_dir('Codeception.Module.UniversalFramework.useUniversalFramework.fail.html'), $filename);
             }),
         ]);
         $module->_initialize();
         $module->amOnPage('/');
 
-        $cest = new \Codeception\Test\Cest($this->module, 'looks:like::test', 'demo1Cest.php');
+        $cest = new \Codeception\Test\Cest($this->module, 'useUniversalFramework', 'demo1Cest.php');
         $module->_failed($cest, new \PHPUnit\Framework\AssertionFailedError());
     }
 }
