@@ -7,6 +7,7 @@ use Codeception\Exception\MalformedLocatorException;
 use Codeception\Lib\Framework;
 use Codeception\Test\Unit;
 use PHPUnit\Framework\AssertionFailedError;
+use PHPUnit\Framework\ExpectationFailedException;
 
 /**
  * Author: davert
@@ -480,22 +481,36 @@ abstract class TestsForWeb extends Unit
         $this->assertNotEmpty(data::get('files'));
     }
 
-    public function testSeeCheckboxIsNotChecked()
-    {
-        $this->module->amOnPage('/form/checkbox');
-        $this->module->dontSeeCheckboxIsChecked('#checkin');
-        $this->module->dontSeeCheckboxIsChecked(['css' => '#checkin']);
-        $this->module->dontSeeCheckboxIsChecked('I Agree');
+    public function checkBoxes(): iterable {
+        yield ['/form/checkbox_checked', ['css' => "#checkedbox1"], true];
+        yield ['/form/checkbox_checked', ['css' => "#checkedbox2"], true];
+        yield ['/form/checkbox', '#checkin', false];
+        yield ['/form/checkbox', ['css' => '#checkin'], false];
+        yield ['/form/checkbox', 'I Agree', false];
+        yield ['/info', 'input[type=checkbox]', true];
+        yield ['/info', ['css' => 'input[type=checkbox]'], true];
+        yield ['/info', 'Checked', true];
     }
 
-    public function testSeeCheckboxChecked()
+    #[\Codeception\Attribute\DataProvider('checkBoxes')]
+    public function testSeeCheckboxIsNotChecked(string $page, string|array $selector, bool $checked): void
     {
-        $this->module->amOnPage('/info');
-        $this->module->seeCheckboxIsChecked('input[type=checkbox]');
-        $this->module->seeCheckboxIsChecked(['css' => 'input[type=checkbox]']);
-        $this->module->seeCheckboxIsChecked('Checked');
+        $this->module->amOnPage($page);
+        if ($checked) {
+            $this->expectException(ExpectationFailedException::class);
+        }
+        $this->module->dontSeeCheckboxIsChecked($selector);
     }
 
+    #[\Codeception\Attribute\DataProvider('checkBoxes')]
+    public function testSeeCheckboxIsChecked(string $page, string|array $selector, bool $checked): void
+    {
+        $this->module->amOnPage($page);
+        if (!$checked) {
+            $this->expectException(ExpectationFailedException::class);
+        }
+        $this->module->seeCheckboxIsChecked($selector);
+    }
     public function testSeeWithNonLatin()
     {
         $this->module->amOnPage('/info');

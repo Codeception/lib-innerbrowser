@@ -655,13 +655,13 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     public function seeCheckboxIsChecked($checkbox): void
     {
         $checkboxes = $this->getFieldsByLabelOrCss($checkbox);
-        $this->assertDomContains($checkboxes->filter('input[checked=checked]'), 'checkbox');
+        $this->assertGreaterThan(0, $checkboxes->filter('input[checked]')->count());
     }
 
     public function dontSeeCheckboxIsChecked($checkbox): void
     {
         $checkboxes = $this->getFieldsByLabelOrCss($checkbox);
-        $this->assertSame(0, $checkboxes->filter('input[checked=checked]')->count());
+        $this->assertSame(0, $checkboxes->filter('input[checked]')->count());
     }
 
     public function seeInField($field, $value): void
