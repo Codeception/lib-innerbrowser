@@ -18,18 +18,18 @@
     ],
     "homepage": "https://codeception.com/",
     "require": {
-        "php": "^8.0",
+        "php": "^8.1",
         "ext-dom": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "codeception/codeception": "^5.0",
+        "codeception/codeception": "^5.0.8",
         "codeception/lib-web": "^1.0.1",
-        "phpunit/phpunit": "^9.5",
+        "phpunit/phpunit": "^10.0",
         "symfony/browser-kit": "^4.4.24 || ^5.4 || ^6.0",
         "symfony/dom-crawler": "^4.4.30 || ^5.4 || ^6.0"
     },
     "require-dev": {
-        "codeception/util-universalframework": "dev-master"
+        "codeception/util-universalframework": "^1.0"
     },
     "minimum-stability": "RC",
     "autoload": {
