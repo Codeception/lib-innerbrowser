@@ -1569,7 +1569,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     /**
      * Grabs current page source code.
      *
-     * @throws ModuleException if no page was opened.
+     * @throws \Codeception\Exception\ModuleException if no page was opened.
      * @return string Current page source code.
      */
     public function grabPageSource(): string
