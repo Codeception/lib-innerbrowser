@@ -1906,7 +1906,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
                 }
 
                 parse_str($qs, $expandedValue);
-                $varName = substr($name, 0, strlen(key($expandedValue)));
+                $varName = substr($name, 0, strlen((string)key($expandedValue)));
                 $requestParams = array_replace_recursive($requestParams, [$varName => current($expandedValue)]);
             }
         }
