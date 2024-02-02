@@ -30,8 +30,10 @@ class data {
     protected static function load()
     {
         $data = file_get_contents(__DIR__.self::$filename);
-        $data = $data ? unserialize($data) : $data = array();
-        if (!is_array($data)) $data = array();
+        $data = $data ? unserialize(trim($data)) : [];
+        if (!is_array($data)) {
+            $data = [];
+        }
         return $data;
     }
 
