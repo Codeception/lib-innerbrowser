@@ -8,6 +8,7 @@ use Codeception\Lib\Framework;
 use Codeception\Test\Unit;
 use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\ExpectationFailedException;
+use Symfony\Component\BrowserKit\Response;
 
 /**
  * Author: davert
@@ -1865,5 +1866,27 @@ abstract class TestsForWeb extends Unit
         $this->assertSame('on', $form['vanilla']); // 'on' is set internally
         $this->assertFalse(isset($form['butter']));
 
+    }
+
+    public function testManualRedirect()
+    {
+        $this->module->amOnPage('/info');
+        $this->module->see('Information', 'h1');
+
+        $this->module->stopFollowingRedirects();
+        $this->module->amOnPage('/');
+        $this->module->seeResponseCodeIsBetween(200, 299);
+        $this->module->see('Welcome to test app!', 'h1');
+
+        // Workaround https://github.com/Codeception/util-universalframework/issues/3
+        $this->module->client->mockResponse(new Response('', 301, [
+            'Location' => '/info',
+        ]));
+
+        $this->module->click('Test redirect');
+        $this->module->seeResponseCodeIs(301);
+        $this->module->followRedirect();
+        $this->module->seeCurrentUrlEquals('/info');
+        $this->module->see('Information', 'h1');
     }
 }

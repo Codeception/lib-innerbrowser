@@ -30,6 +30,7 @@
 </div>
 
 <a href="/info" title="Link Title">Link Text</a>
+<a href="/redirect">Test redirect</a>
 
 
 A wise man said: "debug!"
