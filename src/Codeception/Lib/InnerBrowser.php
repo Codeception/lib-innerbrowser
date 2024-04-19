@@ -2127,7 +2127,9 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     public function followRedirect(): void
     {
-        $this->client->followRedirect();
+        $this->crawler = $this->client->followRedirect();
+        $this->baseUrl = $this->retrieveBaseUrl();
+        $this->forms = [];
     }
 
     /**
