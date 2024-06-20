@@ -407,7 +407,10 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             $anchor = $this->getCrawler()->selectLink($link);
         }
 
-        if (count($anchor) > 0) {
+        if (count($anchor) > 1) {
+            throw new TestRuntimeException(count($anchor) . " matching elements found with [$link], try to be more precise about what to click");
+        }
+        if (count($anchor) === 1) {
             $this->openHrefFromDomNode($anchor->getNode(0));
             return;
         }
