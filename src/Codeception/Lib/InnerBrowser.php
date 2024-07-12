@@ -365,8 +365,8 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     }
 
     /**
-     * Deletes the header with the passed name.  Subsequent requests
-     * will not have the deleted header in its request.
+     * Unsets a HTTP header (that was originally added by [haveHttpHeader()](#haveHttpHeader)),
+     * so that subsequent requests will not send it anymore.
      *
      * Example:
      * ```php
@@ -374,16 +374,24 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      * $I->haveHttpHeader('X-Requested-With', 'Codeception');
      * $I->amOnPage('test-headers.php');
      * // ...
-     * $I->deleteHeader('X-Requested-With');
+     * $I->unsetHeader('X-Requested-With');
      * $I->amOnPage('some-other-page.php');
      * ```
      *
-     * @param string $name the name of the header to delete.
+     * @param string $name the name of the header to unset.
      */
-    public function deleteHeader(string $name): void
+    public function unsetHeader(string $name): void
     {
         $name = implode('-', array_map('ucfirst', explode('-', strtolower(str_replace('_', '-', $name)))));
         unset($this->headers[$name]);
+    }
+
+    /**
+     * @deprecated Use [unsetHttpHeader](#unsetHttpHeader) instead
+     */
+    public function deleteHeader(string $name): void
+    {
+        $this->unsetHttpHeader($name);
     }
 
     public function amOnPage(string $page): void
