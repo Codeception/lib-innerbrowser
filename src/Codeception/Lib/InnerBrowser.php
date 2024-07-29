@@ -608,7 +608,11 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      */
     public function _getCurrentUri(): string
     {
-        return Uri::retrieveUri($this->getRunningClient()->getHistory()->current()->getUri());
+        try {
+            return Uri::retrieveUri($this->getRunningClient()->getHistory()->current()->getUri());
+        } catch (\LogicException $e) {
+            throw new \LogicException($e->getMessage() . ' Call `$I->amOnPage()` first.');
+        }
     }
 
     public function seeInCurrentUrl(string $uri): void
