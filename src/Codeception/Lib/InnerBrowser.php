@@ -156,7 +156,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         array $parameters = [],
         array $files = [],
         array $server = [],
-        string $content = null
+        ?string $content = null
     ): ?string {
         $this->clientRequest($method, $uri, $parameters, $files, $server, $content);
         return $this->_getResponseContent();
@@ -189,7 +189,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         array $parameters = [],
         array $files = [],
         array $server = [],
-        string $content = null,
+        ?string $content = null,
         bool $changeHistory = true
     ): SymfonyCrawler {
         $this->debugSection("Request Headers", $this->headers);
@@ -280,7 +280,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         array $parameters = [],
         array $files = [],
         array $server = [],
-        string $content = null
+        ?string $content = null
     ): void {
         $this->crawler = $this->clientRequest($method, $uri, $parameters, $files, $server, $content);
         $this->baseUrl = $this->retrieveBaseUrl();
@@ -562,7 +562,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertPageSourceNotContains($raw);
     }
 
-    public function seeLink(string $text, string $url = null): void
+    public function seeLink(string $text, ?string $url = null): void
     {
         $crawler = $this->getCrawler()->selectLink($text);
         if ($crawler->count() === 0) {
@@ -633,7 +633,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->assertNotRegExp($uri, $this->_getCurrentUri());
     }
 
-    public function grabFromCurrentUrl(string $uri = null): mixed
+    public function grabFromCurrentUrl(?string $uri = null): mixed
     {
         if (!$uri) {
             return $this->_getCurrentUri();
@@ -892,7 +892,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
      *        form
      * @param string|null $button the name of a submit button in the form
      */
-    protected function proceedSubmitForm(Crawler $frmCrawl, array $params, string $button = null): void
+    protected function proceedSubmitForm(Crawler $frmCrawl, array $params, ?string $button = null): void
     {
         $url = null;
         $form = $this->getFormFor($frmCrawl);
@@ -939,7 +939,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->forms = [];
     }
 
-    public function submitForm($selector, array $params, string $button = null): void
+    public function submitForm($selector, array $params, ?string $button = null): void
     {
         $form = $this->match($selector)->first();
         if (count($form) === 0) {
@@ -1374,7 +1374,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $this->debugSection('Response Headers', $this->getRunningClient()->getInternalResponse()->getHeaders());
     }
 
-    public function makeHtmlSnapshot(string $name = null): void
+    public function makeHtmlSnapshot(?string $name = null): void
     {
         if (empty($name)) {
             $name = uniqid(date("Y-m-d_H-i-s_"), true);
@@ -1487,7 +1487,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         return $nodes->first()->attr($attribute);
     }
 
-    public function grabMultiple($cssOrXpath, string $attribute = null): array
+    public function grabMultiple($cssOrXpath, ?string $attribute = null): array
     {
         $result = [];
         $nodes = $this->match($cssOrXpath);
