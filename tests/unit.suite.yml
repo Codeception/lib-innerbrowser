@@ -1,5 +1,5 @@
 # Codeception Test Suite Configuration
 
 # suite for unit (internal) tests.
-error_level: "E_ALL | E_STRICT"
+error_level: "E_ALL"
 class_name: UnitTester
