@@ -248,6 +248,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
     protected function isInternalDomain(string $domain): bool
     {
         if ($this->internalDomains === null) {
+
             $this->internalDomains = $this->getInternalDomains();
         }
 
@@ -258,6 +259,14 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         }
 
         return false;
+    }
+
+    /**
+     * Returns a list of recognized domain names
+     */
+    protected function getInternalDomains(): array
+    {
+        return [];
     }
 
     /**

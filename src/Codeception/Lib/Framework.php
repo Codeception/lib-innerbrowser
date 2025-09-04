@@ -11,14 +11,6 @@ namespace Codeception\Lib;
  */
 abstract class Framework extends InnerBrowser
 {
-    /**
-     * Returns a list of recognized domain names
-     */
-    protected function getInternalDomains(): array
-    {
-        return [];
-    }
-
     public function _beforeSuite($settings = [])
     {
         /**
