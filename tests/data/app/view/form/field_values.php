@@ -54,5 +54,6 @@
         
         <input type="submit" name="submit" value="Submit" />
     </form>
+    <button type="submit" name="button_without_form" value="yes" />
 </body>
 </html>

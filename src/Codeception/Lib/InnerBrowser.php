@@ -802,7 +802,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             return $values;
         }
 
-        $this->fail("Element {$nodes} is not a form field or does not contain a form field");
+        $this->fail("Element {$nodes->getNode(0)?->getNodePath()} is not a form field or does not contain a form field");
     }
 
     /**
@@ -1539,7 +1539,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
             return $values;
         }
 
-        $this->fail("Element {$nodes} is not a form field or does not contain a form field");
+        $this->fail("Element {$nodes->getNode(0)?->getNodePath()} is not a form field or does not contain a form field");
     }
 
     public function setCookie($name, $val, $params = [])

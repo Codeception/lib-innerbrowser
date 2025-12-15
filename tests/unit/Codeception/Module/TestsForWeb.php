@@ -633,6 +633,14 @@ abstract class TestsForWeb extends Unit
         $this->module->dontSeeInField('textarea', 'sunset');
         $this->module->dontSeeInField('descendant-or-self::textarea[@id="description"]', 'sunset');
     }
+    
+    public function testSeeInFieldOnButtonWithoutFormFails()
+    {
+        $this->shouldFail('Element /html/body/button is not a form field or does not contain a form field');
+        
+        $this->module->amOnPage('/form/field_values');
+        $this->module->seeInField(['name' => 'button_without_form'], 'yes');
+    }
 
     public function testSeeInFormFields()
     {
@@ -782,6 +790,14 @@ abstract class TestsForWeb extends Unit
         $this->module->fillField('//textarea[@name="textarea[name][]"]', 'new value');
         $result = $this->module->grabValueFrom('#textarea_with_square_bracket');
         $this->assertSame('new value', $result);
+    }
+
+    public function testGrabValueFromOnButtonWithoutFormFails()
+    {
+        $this->shouldFail('Element /html/body/button is not a form field or does not contain a form field');
+
+        $this->module->amOnPage('/form/field_values');
+        $this->module->grabValueFrom(['name' => 'button_without_form']);
     }
 
     public function testGrabAttributeFrom()
@@ -1251,9 +1267,12 @@ abstract class TestsForWeb extends Unit
         $this->assertSame('2', $form['sandwich_select']);
     }
 
-    protected function shouldFail()
+    protected function shouldFail(?string $message = null)
     {
         $this->expectException(AssertionFailedError::class);
+        if (null !== $message) {
+            $this->expectExceptionMessage($message);
+        }
     }
 
     /**
