@@ -1200,7 +1200,7 @@ class InnerBrowser extends Module implements Web, PageSourceSaver, ElementLocato
         $fieldName = $this->getSubmissionFormFieldName($field->attr('name'));
 
         if (is_array($option)) {
-            if (!isset($option[0])) { // strict option locator
+            if ($option && !isset($option[0])) { // strict option locator
                 $form[$fieldName]->select($this->matchOption($field, $option));
                 codecept_debug($option);
                 return;
