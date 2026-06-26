@@ -68,6 +68,17 @@ final class FrameworksTest extends TestsForWeb
         $this->module->seeCurrentUrlEquals('/iframe');
     }
 
+    public function testMoveBackPreservesForwardHistory()
+    {
+        $this->module->amOnPage('/iframe');
+        $this->module->amOnPage('/info');
+        $this->module->amOnPage('/');
+        $this->module->moveBack();
+        $this->module->seeCurrentUrlEquals('/info');
+        $this->module->moveBack();
+        $this->module->seeCurrentUrlEquals('/iframe');
+    }
+
     public function testMoveBackThrowsExceptionIfNumberOfStepsIsInvalid()
     {
         $this->module->amOnPage('/iframe');
@@ -80,6 +91,50 @@ final class FrameworksTest extends TestsForWeb
         foreach ($invalidValues as $invalidValue) {
             try {
                 $this->module->moveBack($invalidValue);
+                $this->fail('Expected to get exception here');
+            } catch (InvalidArgumentException $exception) {
+                codecept_debug('Exception: ' . $exception->getMessage());
+            } catch (TypeError $error) {
+                codecept_debug('Error: ' . $error->getMessage());
+            }
+        }
+    }
+
+    public function testMoveForwardOneStep()
+    {
+        $this->module->amOnPage('/iframe');
+        $this->module->amOnPage('/info');
+        $this->module->amOnPage('/');
+        $this->module->moveBack(2);
+        $this->module->seeCurrentUrlEquals('/iframe');
+        $this->module->moveForward();
+        $this->module->seeCurrentUrlEquals('/info');
+        $this->module->moveForward();
+        $this->module->seeCurrentUrlEquals('/');
+    }
+
+    public function testMoveForwardTwoSteps()
+    {
+        $this->module->amOnPage('/iframe');
+        $this->module->amOnPage('/info');
+        $this->module->amOnPage('/');
+        $this->module->moveBack(2);
+        $this->module->seeCurrentUrlEquals('/iframe');
+        $this->module->moveForward(2);
+        $this->module->seeCurrentUrlEquals('/');
+    }
+
+    public function testMoveForwardThrowsExceptionIfNumberOfStepsIsInvalid()
+    {
+        $this->module->amOnPage('/iframe');
+        $this->module->amOnPage('/');
+        $this->module->moveBack();
+        $this->module->seeCurrentUrlEquals('/iframe');
+
+        $invalidValues = [0, -5, 1.5, 'a', 3];
+        foreach ($invalidValues as $invalidValue) {
+            try {
+                $this->module->moveForward($invalidValue);
                 $this->fail('Expected to get exception here');
             } catch (InvalidArgumentException $exception) {
                 codecept_debug('Exception: ' . $exception->getMessage());
